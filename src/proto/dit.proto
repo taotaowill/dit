@@ -1,0 +1,44 @@
+package baidu.dit.proto;
+
+option cc_generic_services = true;
+
+enum Status {
+    kOk = 0;
+    kError = 1;
+}
+
+message ShareRequest {
+     optional string path = 1;
+}
+
+message ShareResponse {
+    optional Status status = 1;
+    optional string key = 2;
+}
+
+message UnShareRequest {
+    optional string key = 1;
+}
+
+message UnShareResponse {
+    optional Status status = 1;
+}
+
+message ListRequest {
+    optional string key = 1;
+}
+
+message SharePoint {
+    optional string path = 1;
+    optional string key = 2;
+}
+
+message ListResponse {
+    repeated SharePoint shares = 1;
+}
+
+service DitServer {
+    rpc Share(ShareRequest) returns (ShareResponse);
+    rpc Unshare(UnShareRequest) returns (UnShareResponse);
+    rpc List(ListRequest) returns (ListResponse);
+}
