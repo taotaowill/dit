@@ -1,3 +1,10 @@
 *.o
+*.swp
+*.pb.*
+
 thirdsrc/
 thirdparty/
+
+*.INFO*
+*.WARNING*
+*.ERROR*

@@ -39,6 +39,6 @@ message ListResponse {
 
 service DitServer {
     rpc Share(ShareRequest) returns (ShareResponse);
-    rpc Unshare(UnShareRequest) returns (UnShareResponse);
+    //rpc Unshare(UnShareRequest) returns (UnShareResponse);
     rpc List(ListRequest) returns (ListResponse);
 }

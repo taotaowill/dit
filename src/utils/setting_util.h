@@ -23,12 +23,3 @@ void SetupLog(const std::string& name) {
     google::SetLogSymlink(google::FATAL, "");
     google::InstallFailureSignalHandler();
 }
-
-int main(int argc, char* argv[]) {
-    google::ParseCommandLineFlags(&argc, &argv, true);
-    google::InitGoogleLogging(argv[0]);
-    SetupLog("ditd");
-    LOG(INFO) << "ditd start...";
-
-    return 0;
-}
