@@ -7,21 +7,18 @@ enum Status {
     kError = 1;
 }
 
+message ReturnCode {
+    optional Status status = 1;
+    optional string message = 2;
+}
+
 message ShareRequest {
      optional string path = 1;
 }
 
 message ShareResponse {
-    optional Status status = 1;
+    optional ReturnCode return_code = 1;
     optional string key = 2;
-}
-
-message UnShareRequest {
-    optional string key = 1;
-}
-
-message UnShareResponse {
-    optional Status status = 1;
 }
 
 message ListRequest {
@@ -37,8 +34,27 @@ message ListResponse {
     repeated SharePoint shares = 1;
 }
 
+enum DitFileType {
+    kFile = 1;
+    kDirectory = 2;
+}
+
+message DitFile {
+    optional string name = 1;
+    optional DitFileType type = 2;
+    optional bytes content = 3;
+}
+
+message DownloadRequest {
+    optional string key = 1;
+}
+
+message DownloadResponse {
+    repeated DitFile files = 1;
+}
+
 service DitServer {
     rpc Share(ShareRequest) returns (ShareResponse);
-    //rpc Unshare(UnShareRequest) returns (UnShareResponse);
     rpc List(ListRequest) returns (ListResponse);
+    rpc Download(DownloadRequest) returns (DownloadResponse);
 }
