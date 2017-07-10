@@ -7,36 +7,21 @@ enum Status {
     kError = 1;
 }
 
-message ReturnCode {
-    optional Status status = 1;
-    optional string message = 2;
-}
-
-message ShareRequest {
-     optional string path = 1;
-}
-
-message ShareResponse {
-    optional ReturnCode return_code = 1;
-    optional string key = 2;
-}
-
-message ListRequest {
-    optional string key = 1;
-}
-
-message SharePoint {
-    optional string path = 1;
-    optional string key = 2;
-}
-
-message ListResponse {
-    repeated SharePoint shares = 1;
+enum Option {
+    kAll = 0;
+    kColor = 1;
+    kForce = 2;
+    kRecursive = 3;
 }
 
 enum DitFileType {
-    kFile = 1;
-    kDirectory = 2;
+    kDitFile = 1;
+    kDitDirectory = 2;
+}
+
+message ReturnCode {
+    optional Status status = 1;
+    optional string message = 2;
 }
 
 message DitFile {
@@ -45,16 +30,47 @@ message DitFile {
     optional bytes content = 3;
 }
 
-message DownloadRequest {
-    optional string key = 1;
+message LsRequest {
+    optional string path = 1;
+    repeated Option options = 2;
 }
 
-message DownloadResponse {
+message LsResponse {
+    optional ReturnCode ret = 1;
+    repeated DitFile files = 2;
+}
+
+message RmRequest {
+    optional string path = 1;
+}
+
+message RmResponse {
+    optional ReturnCode ret = 1;
+}
+
+message PutRequest {
     repeated DitFile files = 1;
+    optional string dest_path = 2;
+}
+
+message PutResponse {
+    optional ReturnCode ret = 1;
+}
+
+message GetRequest {
+    optional string path = 1;
+}
+
+message GetResponse {
+    optional ReturnCode ret = 1;
+    repeated DitFile files = 2;
 }
 
 service DitServer {
-    rpc Share(ShareRequest) returns (ShareResponse);
-    rpc List(ListRequest) returns (ListResponse);
-    rpc Download(DownloadRequest) returns (DownloadResponse);
+    rpc Ls(LsRequest) returns (LsResponse);
+    //rpc Cp(CpRequest) returns (CpResponse);
+    //rpc Mv(MvRequest) returns (MvResponse);
+    rpc Rm(RmRequest) returns (RmResponse);
+    rpc Get(GetRequest) returns (GetResponse);
+    rpc Put(PutRequest) returns (PutResponse);
 }

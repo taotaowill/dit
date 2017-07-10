@@ -19,7 +19,7 @@ cd ${DEPS_SOURCE}
 # boost
 if [ ! -f "${FLAG_DIR}/boost_1_57_0" ] \
     || [ ! -d "${DEPS_PREFIX}/boost_1_57_0/boost" ]; then
-    wget -O boost_1_57_0.tar.gz --no-check-certificate http://jaist.dl.sourceforge.net/project/boost/boost/1.57.0/boost_1_57_0.tar.gz
+    wget -O boost_1_57_0.tar.gz --no-check-certificate https://jaist.dl.sourceforge.net/project/boost/boost/1.57.0/boost_1_57_0.tar.gz
     tar zxf boost_1_57_0.tar.gz
     rm -rf ${DEPS_PREFIX}/boost_1_57_0
     mv boost_1_57_0 ${DEPS_PREFIX}
@@ -61,12 +61,12 @@ if [ ! -f "${FLAG_DIR}/snappy_1_1_1" ] \
 fi
 
 # sofa-pbrpc
-if [ ! -f "${FLAG_DIR}/sofa-pbrpc_1_0_0" ] \
+if [ ! -f "${FLAG_DIR}/sofa-pbrpc_1_1_3" ] \
     || [ ! -f "${DEPS_PREFIX}/lib/libsofa-pbrpc.a" ] \
     || [ ! -d "${DEPS_PREFIX}/include/sofa/pbrpc" ]; then
-    wget --no-check-certificate -O sofa-pbrpc-1.1.2.tar.gz https://github.com/baidu/sofa-pbrpc/archive/v1.1.2.tar.gz
-    tar zxf sofa-pbrpc-1.1.2.tar.gz
-    cd sofa-pbrpc-1.1.2
+    wget --no-check-certificate -O sofa-pbrpc-1.1.3.tar.gz https://github.com/baidu/sofa-pbrpc/archive/v1.1.3.tar.gz
+    tar zxf sofa-pbrpc-1.1.3.tar.gz
+    cd sofa-pbrpc-1.1.3
     sed -i '/BOOST_HEADER_DIR=/ d' depends.mk
     sed -i '/PROTOBUF_DIR=/ d' depends.mk
     sed -i '/SNAPPY_DIR=/ d' depends.mk
@@ -80,7 +80,7 @@ if [ ! -f "${FLAG_DIR}/sofa-pbrpc_1_0_0" ] \
     make -j4
     make install
     cd ..
-    touch "${FLAG_DIR}/sofa-pbrpc_1_0_0"
+    touch "${FLAG_DIR}/sofa-pbrpc_1_1_3"
 fi
 
 # cmake for gflags
@@ -166,6 +166,22 @@ if [ ! -f "${FLAG_DIR}/gperftools_2_2_1" ] \
     make install
     cd -
     touch "${FLAG_DIR}/gperftools_2_2_1"
+fi
+
+# ins
+if [ ! -f "${FLAG_DIR}/ins" ] \
+    || [ ! -f "${DEPS_PREFIX}/lib/libins_sdk.a" ] \
+    || [ ! -f "${DEPS_PREFIX}/include/ins_sdk.h" ]; then
+    rm -rf ins
+    git clone https://github.com/baidu/ins
+    cd ins
+    sed -i "s|^PREFIX=.*|PREFIX=${DEPS_PREFIX}|" Makefile
+    sed -i "s|^PROTOC ?=.*|PROTOC=${DEPS_PREFIX}/bin/protoc|" Makefile
+    sed -i "s|^GFLAGS_PATH ?=.*|GFLAGS_PATH=${DEPS_PREFIX}|" Makefile
+    export BOOST_PATH=${DEPS_PREFIX}/boost_1_57_0
+    make -j4 default >/dev/null && make -j4 install_sdk >/dev/null
+    cd -
+    touch "${FLAG_DIR}/ins"
 fi
 
 # common

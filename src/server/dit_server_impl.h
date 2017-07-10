@@ -6,6 +6,7 @@
 #include <common/mutex.h>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
+#include <ins_sdk.h>
 
 #include "proto/dit.pb.h"
 
@@ -16,22 +17,18 @@ class DitServerImpl: public proto::DitServer {
 public:
     DitServerImpl();
     ~DitServerImpl();
-    void Share(::google::protobuf::RpcController* controller,
-               const proto::ShareRequest* request,
-               proto::ShareResponse* response,
-               ::google::protobuf::Closure* done);
-    void List(::google::protobuf::RpcController* controller,
-               const proto::ListRequest* request,
-               proto::ListResponse* response,
-               ::google::protobuf::Closure* done);
-    void Download(::google::protobuf::RpcController* controller,
-                  const proto::DownloadRequest* request,
-                  proto::DownloadResponse* response,
-                  ::google::protobuf::Closure* done);
+    void Ls(::google::protobuf::RpcController* controller,
+            const proto::LsRequest* request,
+            proto::LsResponse* response,
+            ::google::protobuf::Closure* done);
+    bool RegisterOnNexus(const std::string& endpoint);
 private:
-    std::map<std::string, std::string> paths_;
+    bool Init();
+private:
     ThreadPool background_pool_;
     Mutex mutex_;
+    ::galaxy::ins::sdk::InsSDK* nexus_;
+    std::string endpoint_;
 };
 
 }
