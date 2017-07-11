@@ -1,6 +1,8 @@
 *.o
 *.swp
 *.pb.*
+*.un~
+.*
 
 thirdsrc/
 thirdparty/
