@@ -2,6 +2,8 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
 #include "dit_server_impl.h"
 #include "proto/dit.pb.h"
@@ -89,6 +91,56 @@ void DitServerImpl::Ls(::google::protobuf::RpcController* controller,
     done->Run();
 
     return;
+}
+
+void DitServerImpl::Get(::google::protobuf::RpcController* controller,
+         const proto::GetRequest* request,
+         proto::GetResponse* response,
+         ::google::protobuf::Closure* done) {
+    LOG(INFO) << "get path: " << request->path();
+    if (!request->has_path()) {
+        response->mutable_ret()->set_status(proto::kError);
+        response->mutable_ret()->set_message("invalid param, path is required");
+        done->Run();
+        return;
+    }
+
+    std::string path = request->path();
+    if (!boost::filesystem::exists(path)) {
+        response->mutable_ret()->set_status(proto::kError);
+        response->mutable_ret()->set_message("path: " + path + " does not exist");
+        done->Run();
+        return;
+    }
+
+    boost::filesystem::path fullpath(request->path());
+    if (boost::filesystem::is_directory(request->path())) {
+        std::vector<std::string> files;
+        boost::filesystem::recursive_directory_iterator end_iter;
+        for (boost::filesystem::recursive_directory_iterator it(fullpath); it!=end_iter; ++it) {
+            try {
+                proto::DitFile* dit_file = response->add_files();
+                if (boost::filesystem::is_directory(*it)){
+                    dit_file->set_type(proto::kDitDirectory);
+                    dit_file->set_size(0);
+                } else {
+                    if(boost::filesystem::is_regular_file(*it)) {
+                        dit_file->set_type(proto::kDitFile);
+                        uintmax_t file_size = boost::filesystem::file_size(*it);
+                        dit_file->set_size(file_size);
+                    }
+                }
+                dit_file->set_name(it->path().string());
+            } catch (const std::exception& ex ){
+                LOG(WARNING) << ex.what();
+                continue;
+            }
+        }
+    } else {
+        //
+    }
+
+    done->Run();
 }
 
 }

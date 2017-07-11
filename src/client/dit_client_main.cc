@@ -3,14 +3,14 @@
 #include "dit_client.h"
 
 void print_usage() {
-    printf("Use:\ndit <command> path\n");
-    printf("\t command:\n");
-    printf("\t    ls <path> [-options]: list the directory, options: a|c \n");
-    printf("\t    cp <srcpath> <destpath> [-options]: copy directory or file, options: r|f\n");
-    printf("\t    mv <srcpath> <destpath> [-options]: rename directory or file, options: r|f\n");
-    printf("\t    rm <path> [-options]: remove direcory or file, options: r|f\n");
-    printf("\t    get <ditfile> <localfile> : copy file from dit to local\n");
-    printf("\t    put <localfile> <ditfile> : copy file from local to dit\n");
+    printf("Usage:\ndit <command> path\n");
+    printf("\tcommand:\n");
+    printf("\t\tls <path> [-options]: list the directory, options: a|c \n");
+    printf("\t\tcp <srcpath> <destpath> [-options]: copy directory or file, options: r|f\n");
+    printf("\t\tmv <srcpath> <destpath> [-options]: rename directory or file, options: r|f\n");
+    printf("\t\trm <path> [-options]: remove direcory or file, options: r|f\n");
+    printf("\t\tget <ditfile> <localfile> : copy file from dit to local\n");
+    printf("\t\tput <localfile> <ditfile> : copy file from local to dit\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -60,3 +60,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+

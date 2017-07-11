@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-
 #include <ins_sdk.h>
+#include <common/mutex.h>
 
 #include "proto/dit.pb.h"
 #include "rpc/rpc_client.h"
@@ -34,9 +34,12 @@ public:
 //private:
 	bool ListServers();
     bool ParsePath(const std::string& raw_path, DitPath& dit_path);
+    void GetFileBlock(const proto::DitFile& file);
     std::map<std::string, proto::DitServer_Stub*> servers_;
     RpcClient rpc_client_;
 	InsSDK* nexus_;
+    Mutex mutex_;
+    int done_;
 };
 
 }

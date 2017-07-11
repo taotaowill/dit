@@ -4,8 +4,10 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/function.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <gflags/gflags.h>
+#include <common/thread_pool.h>
 
 #include "proto/dit.pb.h"
 
@@ -45,7 +47,6 @@ bool DitClient::ListServers() {
         const std::string& full_key = result->Key();
         std::string key = full_key.substr(prefix_len);
 		endpoints.push_back(key);
-        fprintf(stderr, "try load %s from nexus\n", key.c_str());
         result->Next();
     }
 
@@ -85,14 +86,24 @@ bool DitClient::ParsePath(const std::string& raw_path, DitPath& dit_path) {
 }
 
 void DitClient::Ls(int argc, char* argv[]) {
-
-    proto::LsRequest request;
-    proto::LsResponse response;
-
     // parse path
     std::string raw_path = std::string(argv[0]);
-	DitPath path = ParsePath();
-    request.set_path(path);
+    DitPath dit_path;
+	bool ret = ParsePath(raw_path, dit_path);
+    if (!ret) {
+        fprintf(stderr, "path parse failed\n");
+        return;
+    }
+
+    std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.find(dit_path.server);
+    if (it == servers_.end()) {
+        fprintf(stderr, "server: %s is not registered\n", dit_path.server.c_str());
+        return;
+    }
+    proto::DitServer_Stub* stub = it->second;
+    proto::LsRequest request;
+    proto::LsResponse response;
+    request.set_path(dit_path.path);
     // parse options
     if (argc > 1) {
         std::string options_str = argv[1];
@@ -102,15 +113,15 @@ void DitClient::Ls(int argc, char* argv[]) {
             }
         }
     }
-
-    proto::DitServer_Stub* stub = servers_["127.0.0.1:9999"];
     bool ok = rpc_client_.SendRequest(stub,
                                       &proto::DitServer_Stub::Ls,
                                       &request, &response, 5, 1);
 
     if (!ok) {
         fprintf(stderr, "list failed\n");
+        return;
     }
+
     for (int i=0; i<response.files_size(); i++) {
         const proto::DitFile& file = response.files(i);
         fprintf(stdout, "%s\n", file.name().c_str());
@@ -132,6 +143,55 @@ void DitClient::Put(int argc, char* argv[]) {
 }
 
 void DitClient::Get(int argc, char* argv[]) {
+    // parse path
+    std::string src_path = std::string(argv[0]);
+    DitPath dit_path;
+    bool ret = ParsePath(src_path, dit_path);
+    if (!ret) {
+        fprintf(stderr, "path parse failed\n");
+        return;
+    }
+
+    std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.find(dit_path.server);
+    if (it == servers_.end()) {
+        fprintf(stderr, "server: %s is not registered\n", dit_path.server.c_str());
+        return;
+    }
+
+    proto::DitServer_Stub* stub = it->second;
+    proto::GetRequest request;
+    request.set_path(dit_path.path);
+    proto::GetResponse response;
+    bool ok = rpc_client_.SendRequest(stub,
+                                      &proto::DitServer_Stub::Get,
+                                      &request, &response, 5, 1);
+    if (!ok) {
+        fprintf(stderr, "get %s failed\n", dit_path.path.c_str());
+        return;
+    }
+
+    int count = response.files_size();
+    fprintf(stdout, "all files: %d", count);
+
+    done_ = 0;
+    ThreadPool pool(10);
+    for (int i=0; i<response.files_size(); i++) {
+        const proto::DitFile& file = response.files(i);
+        pool.AddTask(boost::bind(&DitClient::GetFileBlock, this, file));
+    }
+
+    while(done_ < count) {
+        usleep(500);
+    }
+
+    return;
+}
+
+void DitClient::GetFileBlock(const proto::DitFile& file) {
+    MutexLock lock(&mutex_);
+    fprintf(stdout, "%s\t%ld\n", file.name().c_str(), file.size());
+    ++done_;
+    return;
 }
 
 }

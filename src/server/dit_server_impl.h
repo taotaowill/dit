@@ -24,6 +24,10 @@ public:
             const proto::LsRequest* request,
             proto::LsResponse* response,
             ::google::protobuf::Closure* done);
+    void Get(::google::protobuf::RpcController* controller,
+             const proto::GetRequest* request,
+             proto::GetResponse* response,
+             ::google::protobuf::Closure* done);
     bool RegisterOnNexus(const std::string& endpoint);
 private:
     bool Init();
