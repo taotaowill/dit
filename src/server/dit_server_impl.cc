@@ -15,7 +15,7 @@ namespace baidu {
 namespace dit {
 
 DitServerImpl::DitServerImpl() {
-    nexus_ = new ::galaxy::ins::sdk::InsSDK(FLAGS_nexus_addr);
+    nexus_ = new InsSDK(FLAGS_nexus_addr);
 }
 
 DitServerImpl::~DitServerImpl() {
@@ -23,8 +23,7 @@ DitServerImpl::~DitServerImpl() {
 }
 
 bool DitServerImpl::RegisterOnNexus(const std::string& endpoint) {
-    LOG(INFO) << "locl endpoint: " << endpoint;
-    ::galaxy::ins::sdk::SDKError err;
+    SDKError err;
     bool ret = nexus_->Lock(FLAGS_nexus_root + FLAGS_server_nexus_prefix + "/" + endpoint, &err);
     if (!ret) {
         LOG(WARNING) << "failed to acquire nexus lock, " << err;

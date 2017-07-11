@@ -13,6 +13,9 @@
 namespace baidu {
 namespace dit {
 
+typedef ::galaxy::ins::sdk::InsSDK InsSDK;
+typedef ::galaxy::ins::sdk::SDKError SDKError;
+
 class DitServerImpl: public proto::DitServer {
 public:
     DitServerImpl();
@@ -27,7 +30,7 @@ private:
 private:
     ThreadPool background_pool_;
     Mutex mutex_;
-    ::galaxy::ins::sdk::InsSDK* nexus_;
+    InsSDK* nexus_;
     std::string endpoint_;
 };
 

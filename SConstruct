@@ -13,3 +13,5 @@ env.Program('ditd', Glob('src/server/*.cc') + ['src/dit_flags.cc', 'src/proto/di
 env.Program('dit', Glob('src/client/*.cc') + ['src/dit_flags.cc', 'src/proto/dit.pb.cc'])
 
 #unittest
+env.Program('test_client', ['test/client/test_client.cc', 'src/dit_flags.cc', 'src/client/dit_client.cc', 'src/proto/dit.pb.cc'])
+

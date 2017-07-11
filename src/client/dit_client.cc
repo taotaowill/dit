@@ -1,24 +1,53 @@
 #include "client/dit_client.h"
 
+#include <vector>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/function.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/algorithm/string.hpp>
+#include <gflags/gflags.h>
 
 #include "proto/dit.pb.h"
+
+DECLARE_string(nexus_addr);
+DECLARE_string(nexus_root);
+DECLARE_string(server_nexus_prefix);
+
 
 namespace baidu {
 namespace dit {
 
 DitClient::DitClient() {
-    Init();
+	nexus_ = new InsSDK(FLAGS_nexus_addr);
+	ListServers();
 }
 
-bool DitClient::Init() {
+
+DitClient::~DitClient() {
+	delete nexus_;
+    std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.begin();
+    for (; it!=servers_.end(); ++it) {
+        if (NULL != it->second) {
+            delete it->second;
+        }
+    }
+}
+
+bool DitClient::ListServers() {
     bool ret = true;
 
     // get servers endpoints
     std::vector<std::string> endpoints;
-    endpoints.push_back("127.0.0.1:9999");
+	std::string full_prefix = FLAGS_nexus_root + FLAGS_server_nexus_prefix;
+    ScanResult* result = nexus_->Scan(full_prefix + "/", full_prefix + "/\xff");
+    size_t prefix_len = full_prefix.size() + 1;
+    while (!result->Done()) {
+        const std::string& full_key = result->Key();
+        std::string key = full_key.substr(prefix_len);
+		endpoints.push_back(key);
+        fprintf(stderr, "try load %s from nexus\n", key.c_str());
+        result->Next();
+    }
 
     for (unsigned int i=0; i<endpoints.size(); i++) {
         std::string endpoint = endpoints[i];
@@ -35,20 +64,34 @@ bool DitClient::Init() {
     return ret;
 }
 
-DitClient::~DitClient() {
-    std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.begin();
-    for (; it!=servers_.end(); ++it) {
-        if (NULL != it->second) {
-            delete it->second;
-        }
+bool DitClient::ParsePath(const std::string& raw_path, DitPath& dit_path) {
+    if (!boost::algorithm::starts_with(raw_path, "/")) {
+        fprintf(stderr, "parse path failed, path: %s is not start with /\n", raw_path.c_str());
+        return false;
     }
+
+    std::vector<std::string> path_parts;
+    boost::split(path_parts, raw_path, boost::is_any_of("/"), boost::token_compress_on);
+    if (path_parts.size() < 3) {
+        fprintf(stderr, "parse path failed, path: %s in wrong format\n", raw_path.c_str());
+        return false;
+    }
+
+    dit_path.server = path_parts[1];
+	dit_path.path = raw_path;
+    boost::replace_first(dit_path.path, "/" + dit_path.server, "");
+
+    return true;
 }
 
 void DitClient::Ls(int argc, char* argv[]) {
+
     proto::LsRequest request;
     proto::LsResponse response;
+
     // parse path
-    std::string path = std::string(argv[0]);
+    std::string raw_path = std::string(argv[0]);
+	DitPath path = ParsePath();
     request.set_path(path);
     // parse options
     if (argc > 1) {
