@@ -32,30 +32,12 @@ int main(int argc, char* argv[]) {
             return -1;
         }
         client->Cp(argc - 2, argv + 2);
-    } else if (strcmp(argv[1], "mv") == 0) {
-        if (argc < 4) {
-            print_usage();
-            return -1;
-        }
-        client->Mv(argc - 2, argv + 2);
     } else if (strcmp(argv[1], "rm") == 0) {
         if (argc < 3) {
             print_usage();
             return -1;
         }
         client->Rm(argc - 2, argv + 2);
-    } else if (strcmp(argv[1], "put") == 0) {
-        if (argc < 4) {
-            print_usage();
-            return -1;
-        }
-        client->Put(argc - 2, argv + 2);
-    } else if (strcmp(argv[1], "get") == 0 ) {
-        if (argc < 4) {
-            print_usage();
-            return -1;
-        }
-        client->Get(argc - 2, argv + 2);
     }
 
     return 0;

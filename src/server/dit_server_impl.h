@@ -29,6 +29,10 @@ public:
              proto::GetResponse* response,
              ::google::protobuf::Closure* done);
     bool RegisterOnNexus(const std::string& endpoint);
+    void GetFileBlock(::google::protobuf::RpcController* controller,
+                      const proto::GetFileBlockRequest* request,
+                      proto::GetFileBlockResponse* response,
+                      ::google::protobuf::Closure* done);
 private:
     bool Init();
 private:

@@ -1,11 +1,16 @@
 #include "client/dit_client.h"
 
+#include <stdio.h>
 #include <vector>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/function.hpp>
-#include <boost/scoped_ptr.hpp>
+
 #include <boost/bind.hpp>
+#include <boost/function.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <gflags/gflags.h>
 #include <common/thread_pool.h>
 
@@ -14,7 +19,7 @@
 DECLARE_string(nexus_addr);
 DECLARE_string(nexus_root);
 DECLARE_string(server_nexus_prefix);
-
+DECLARE_int32(get_file_block_timeout); 
 
 namespace baidu {
 namespace dit {
@@ -23,7 +28,6 @@ DitClient::DitClient() {
 	nexus_ = new InsSDK(FLAGS_nexus_addr);
 	ListServers();
 }
-
 
 DitClient::~DitClient() {
 	delete nexus_;
@@ -71,16 +75,21 @@ bool DitClient::ParsePath(const std::string& raw_path, DitPath& dit_path) {
         return false;
     }
 
-    std::vector<std::string> path_parts;
-    boost::split(path_parts, raw_path, boost::is_any_of("/"), boost::token_compress_on);
-    if (path_parts.size() < 3) {
-        fprintf(stderr, "parse path failed, path: %s in wrong format\n", raw_path.c_str());
-        return false;
+    if (boost::algorithm::starts_with(raw_path, "//")) {
+        dit_path.server = "";
+        dit_path.path = raw_path;
+        boost::algorithm::replace_first(dit_path.path, "/", "");
+    } else {
+        std::vector<std::string> path_parts;
+        boost::split(path_parts, raw_path, boost::is_any_of("/"), boost::token_compress_on);
+        if (path_parts.size() < 3) {
+            fprintf(stderr, "parse path failed, path: %s in wrong format\n", raw_path.c_str());
+            return false;
+        }
+        dit_path.server = path_parts[1];
+        dit_path.path = raw_path;
+        boost::algorithm::replace_first(dit_path.path, "/" + dit_path.server, "");
     }
-
-    dit_path.server = path_parts[1];
-	dit_path.path = raw_path;
-    boost::replace_first(dit_path.path, "/" + dit_path.server, "");
 
     return true;
 }
@@ -131,53 +140,70 @@ void DitClient::Ls(int argc, char* argv[]) {
 }
 
 void DitClient::Cp(int argc, char* argv[]) {
-}
-
-void DitClient::Mv(int argc, char* argv[]) {
-}
-
-void DitClient::Rm(int argc, char* argv[]) {
-}
-
-void DitClient::Put(int argc, char* argv[]) {
-}
-
-void DitClient::Get(int argc, char* argv[]) {
     // parse path
     std::string src_path = std::string(argv[0]);
-    DitPath dit_path;
-    bool ret = ParsePath(src_path, dit_path);
-    if (!ret) {
-        fprintf(stderr, "path parse failed\n");
+    std::string dst_path = std::string(argv[1]);
+
+    DitPath src_dit_path, dst_dit_path;
+    if(!ParsePath(src_path, src_dit_path)) {
+        fprintf(stderr, "-src path parse failed\n");
         return;
     }
 
-    std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.find(dit_path.server);
-    if (it == servers_.end()) {
-        fprintf(stderr, "server: %s is not registered\n", dit_path.server.c_str());
+    if(!ParsePath(dst_path, dst_dit_path)) {
+        fprintf(stderr, "-dst path parse failed\n");
         return;
     }
 
-    proto::DitServer_Stub* stub = it->second;
+    // temp restrict
+    if (src_dit_path.server == "") {
+        fprintf(stderr, "-src server should not be local\n");
+        return;
+    }
+   
+    if (dst_dit_path.server != "") {
+        fprintf(stderr, "-dst server must not be local\n");
+        return;
+    }
+
+    std::map<std::string, proto::DitServer_Stub*>::iterator src_it = servers_.find(src_dit_path.server);
+    if (src_it == servers_.end()) {
+        fprintf(stderr, "-src server: %s is not registered\n", src_dit_path.server.c_str());
+        return;
+    }
+
+    //if (dst_dit_path.server != "") {
+    //    std::map<std::string, proto::DitServer_Stub*>::iterator dst_it = servers_.find(dst_dit_path.server);
+    //    if (dst_it == servers_.end()) {
+    //        fprintf(stderr, "-dst server: %s is not registered\n", dst_dit_path.server.c_str());
+    //        return;
+    //    }
+    //}
+
+    proto::DitServer_Stub* src_stub = src_it->second;
     proto::GetRequest request;
-    request.set_path(dit_path.path);
     proto::GetResponse response;
-    bool ok = rpc_client_.SendRequest(stub,
+    request.set_path(src_dit_path.path);
+    bool ok = rpc_client_.SendRequest(src_stub,
                                       &proto::DitServer_Stub::Get,
                                       &request, &response, 5, 1);
     if (!ok) {
-        fprintf(stderr, "get %s failed\n", dit_path.path.c_str());
+        fprintf(stderr, "-get %s from %s failed\n", src_dit_path.path.c_str(), src_dit_path.server.c_str());
+        if (response.has_ret()) {
+            fprintf(stderr, "-error: %s\n", response.ret().message().c_str());
+        }
         return;
     }
 
     int count = response.files_size();
-    fprintf(stdout, "all files: %d", count);
+    fprintf(stdout, "all files: %d\n", count);
 
     done_ = 0;
-    ThreadPool pool(10);
+    ThreadPool pool(1);
     for (int i=0; i<response.files_size(); i++) {
         const proto::DitFile& file = response.files(i);
-        pool.AddTask(boost::bind(&DitClient::GetFileBlock, this, file));
+        pool.AddTask(boost::bind(&DitClient::GetFileBlock, this, src_stub, file,
+                                 src_dit_path.path, dst_dit_path.path));
     }
 
     while(done_ < count) {
@@ -187,11 +213,58 @@ void DitClient::Get(int argc, char* argv[]) {
     return;
 }
 
-void DitClient::GetFileBlock(const proto::DitFile& file) {
+void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
+                             const proto::DitFile& file,
+                             const std::string& src_path,
+                             const std::string& dst_path) {
+    proto::GetFileBlockRequest* request = new proto::GetFileBlockRequest;
+    proto::GetFileBlockResponse* response = new proto::GetFileBlockResponse;
+    proto::DitFileBlock* block = request->mutable_block();
+    block->set_offset(0);
+    block->set_length(file.size());
+    block->set_name(file.name());
+    boost::function<void (const proto::GetFileBlockRequest*, proto::GetFileBlockResponse*, bool, int)> callback;
+    callback = boost::bind(&DitClient::GetFileBlockCallback, this, src_path, dst_path, _1, _2, _3, _4);
+    rpc_client_.AsyncRequest(stub, &proto::DitServer_Stub::GetFileBlock,
+                             request, response,
+                             callback, 30, 1);
+    return;
+}
+
+void DitClient::GetFileBlockCallback(const std::string& src_path,
+                                     const std::string& dst_path,
+                                     const proto::GetFileBlockRequest* request,
+                                     proto::GetFileBlockResponse* response,
+                                     bool failed, int /*error*/) {
     MutexLock lock(&mutex_);
-    fprintf(stdout, "%s\t%ld\n", file.name().c_str(), file.size());
+    fprintf(stdout, "--- FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
+            response->block().name().c_str(),
+            response->block().offset(),
+            response->block().length());
+
+    std::string path = response->block().name();
+    boost::algorithm::replace_first(path, src_path, dst_path);
+    fprintf(stderr, "rel: %s\n", path.c_str());
+    FILE* fp;
+    if ((fp = fopen(path.c_str(), "wb")) != NULL) {
+        const proto::DitFileBlock& block = response->block();
+        fseek(fp, 0, SEEK_SET);
+        fwrite(block.content().c_str(), 1, block.length(), fp);
+        fclose(fp);
+        fprintf(stdout, "+++ FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
+                block.name().c_str(),
+                block.offset(),
+                block.length());
+    } else {
+        fprintf(stderr, "-write file block failed, file: %s\n", request->block().name().c_str());
+    }
+     
+
     ++done_;
     return;
+}
+
+void DitClient::Rm(int argc, char* argv[]) {
 }
 
 }

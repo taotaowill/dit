@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -138,6 +139,43 @@ void DitServerImpl::Get(::google::protobuf::RpcController* controller,
         }
     } else {
         //
+    }
+
+    done->Run();
+}
+
+void DitServerImpl::GetFileBlock(::google::protobuf::RpcController* controller,
+                                 const proto::GetFileBlockRequest* request,
+                                 proto::GetFileBlockResponse* response,
+                                 ::google::protobuf::Closure* done) {
+    std::string path = request->block().name();
+    int64_t offset = request->block().offset();
+    int64_t length = request->block().length();
+    LOG(INFO)
+       << "+++ FileBlock, file: [" << path
+       << "], offset: [" << offset
+       << "], length: [" << length
+       << "]";
+
+    char * buf = new char[length];
+    FILE* fp;
+    if (NULL != (fp = fopen(path.c_str(), "rb"))) {
+        int l = fread(buf, 1, length, fp);
+        std::string content = std::string(buf, l);
+        proto::DitFileBlock* block = response->mutable_block(); 
+        block->set_name(path);
+        block->set_offset(offset);
+        block->set_length(l);
+        block->set_content(content);
+        response->mutable_ret()->set_status(proto::kOk);
+        LOG(INFO)
+            << "--- FileBlock, file: [" << path
+            << "], offset: [" << offset
+            << "], length: [" << l
+            << "]";
+    } else {
+        response->mutable_ret()->set_status(proto::kError);
+        response->mutable_ret()->set_message("open file failed");
     }
 
     done->Run();

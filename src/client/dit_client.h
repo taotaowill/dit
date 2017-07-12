@@ -28,17 +28,23 @@ public:
     void Ls(int argc, char* argv[]);
     void Rm(int argc, char* argv[]);
     void Cp(int argc, char* argv[]);
-    void Mv(int argc, char* argv[]);
-    void Get(int argc, char* argv[]);
-    void Put(int argc, char* argv[]);
 //private:
 	bool ListServers();
     bool ParsePath(const std::string& raw_path, DitPath& dit_path);
-    void GetFileBlock(const proto::DitFile& file);
+    void GetFileBlock(proto::DitServer_Stub* stub,
+                      const proto::DitFile& file,
+                      const std::string& src_path,
+                      const std::string& dst_path);
+    void GetFileBlockCallback(const std::string& src_path,
+                              const std::string& dst_path,
+                              const proto::GetFileBlockRequest* request,
+                              proto::GetFileBlockResponse* response,
+                              bool failed, int /*error*/);
     std::map<std::string, proto::DitServer_Stub*> servers_;
     RpcClient rpc_client_;
 	InsSDK* nexus_;
     Mutex mutex_;
+    std::map<std::string, Mutex> files_mutex_;
     int done_;
 };
 
