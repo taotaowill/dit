@@ -1,6 +1,6 @@
 #include <gflags/gflags.h>
 
-DEFINE_string(nexus_addr, "127.0.0.1:8868", "root path of dit regsiter on nexus");
+DEFINE_string(nexus_addr, "cp01-ocean-893.epc.baidu.com:8868", "root path of dit regsiter on nexus");
 DEFINE_string(nexus_root, "/dit", "server list of nexus");
 DEFINE_string(server_port, "9999", "the rpc port of dit_server");
 DEFINE_string(server_nexus_prefix, "/server", "the dit server prefix on nexus");

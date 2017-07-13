@@ -35,70 +35,11 @@ bool DitServerImpl::RegisterOnNexus(const std::string& endpoint) {
     return true;
 }
 
-void DitServerImpl::Ls(::google::protobuf::RpcController* controller,
-                       const proto::LsRequest* request,
-                       proto::LsResponse* response,
-                       ::google::protobuf::Closure* done) {
-    LOG(INFO) << "ls path: " << request->path();
-    if (!request->has_path()) {
-        response->mutable_ret()->set_status(proto::kError);
-        response->mutable_ret()->set_message("invalid param, path is required");
-        done->Run();
-        return;
-    }
-    std::string path = request->path();
-    if (!boost::filesystem::exists(path)) {
-        response->mutable_ret()->set_status(proto::kError);
-        response->mutable_ret()->set_message("path: " + path + " does not exist");
-        done->Run();
-        return;
-    }
-
-    bool optAll = false;
-    for (int i=0; i<request->options_size(); i++) {
-        if (proto::kAll == request->options(i)) {
-            optAll = true;
-            break;
-        }
-    }
-
-    if(boost::filesystem::is_directory(request->path())) {
-        for (boost::filesystem::directory_iterator end_dir_it, it(request->path()); it != end_dir_it; ++it) {
-            std::string p = it->path().string();
-            std::string relative_path = p;
-            boost::replace_first(relative_path, path, "");
-            if (!optAll && (
-                    boost::algorithm::starts_with(relative_path, ".")
-                    || boost::algorithm::starts_with(relative_path, "/."))) {
-                continue;
-            }
-            proto::DitFile* file = response->add_files();
-            if (boost::filesystem::is_directory(p)) {
-                file->set_type(proto::kDitDirectory);
-                if(!boost::algorithm::ends_with(p, "/")) {
-                    p += "/";
-                }
-            } else {
-                file->set_type(proto::kDitFile);
-            }
-            file->set_name(p);
-        }
-    } else {
-        proto::DitFile* file = response->add_files();
-        file->set_name(path);
-        file->set_type(proto::kDitFile);
-    }
-    response->mutable_ret()->set_status(proto::kOk);
-    done->Run();
-
-    return;
-}
-
-void DitServerImpl::Get(::google::protobuf::RpcController* controller,
-         const proto::GetRequest* request,
-         proto::GetResponse* response,
-         ::google::protobuf::Closure* done) {
-    LOG(INFO) << "get path: " << request->path();
+void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
+                                const proto::GetFileMetaRequest* request,
+                                proto::GetFileMetaResponse* response,
+                                ::google::protobuf::Closure* done) {
+    LOG(INFO) << "get file meta, path: " << request->path();
     if (!request->has_path()) {
         response->mutable_ret()->set_status(proto::kError);
         response->mutable_ret()->set_message("invalid param, path is required");
@@ -106,49 +47,88 @@ void DitServerImpl::Get(::google::protobuf::RpcController* controller,
         return;
     }
 
-    std::string path = request->path();
+    boost::filesystem::path path(request->path());
     if (!boost::filesystem::exists(path)) {
         response->mutable_ret()->set_status(proto::kError);
-        response->mutable_ret()->set_message("path: " + path + " does not exist");
+        response->mutable_ret()->set_message("path: " + path.string() + " does not exist");
         done->Run();
         return;
     }
 
-    boost::filesystem::path fullpath(request->path());
-    if (boost::filesystem::is_directory(request->path())) {
-        std::vector<std::string> files;
-        boost::filesystem::recursive_directory_iterator end_iter;
-        for (boost::filesystem::recursive_directory_iterator it(fullpath); it!=end_iter; ++it) {
-            try {
-                proto::DitFile* dit_file = response->add_files();
-                if (boost::filesystem::is_directory(*it)){
-                    dit_file->set_type(proto::kDitDirectory);
-                    dit_file->set_size(0);
-                } else {
+    // file
+    if (boost::filesystem::is_regular_file(path)) {
+        proto::DitFileMeta* dit_file = response->add_files();
+        dit_file->set_type(proto::kDitFile);
+        uintmax_t file_size = boost::filesystem::file_size(path);
+        dit_file->set_size(file_size);
+        done->Run();
+    }
+
+    // directory
+    if (boost::filesystem::is_directory(path)) {
+        // parse options
+        bool opt_r = false;
+        bool opt_a = false;
+        for (int i=0; i<request->options_size(); i++) {
+            if (proto::kOptionAll == request->options(i)) {
+                opt_a = true;
+            }
+            if (proto::kOptionRecursive == request->options(i)) {
+                opt_r = true;
+            }
+        }
+        if (opt_r) {
+            for (boost::filesystem::recursive_directory_iterator end_dir_it, it(path); it!=end_dir_it; ++it) {
+                try {
+                    proto::DitFileMeta* dit_file = response->add_files();
+                    if (boost::filesystem::is_directory(*it)){
+                        dit_file->set_type(proto::kDitDirectory);
+                        dit_file->set_size(0);
+                    }
                     if(boost::filesystem::is_regular_file(*it)) {
+                        // TODO opt_a
                         dit_file->set_type(proto::kDitFile);
                         uintmax_t file_size = boost::filesystem::file_size(*it);
                         dit_file->set_size(file_size);
                     }
+                    dit_file->set_path(it->path().string());
+                } catch (const std::exception& ex ){
+                    LOG(WARNING) << ex.what();
+                    continue;
                 }
-                dit_file->set_name(it->path().string());
-            } catch (const std::exception& ex ){
-                LOG(WARNING) << ex.what();
-                continue;
+            }
+        } else {
+            for (boost::filesystem::directory_iterator end_dir_it, it(path); it != end_dir_it; ++it) {
+                try {
+                    proto::DitFileMeta* dit_file = response->add_files();
+                    if (boost::filesystem::is_directory(*it)){
+                        dit_file->set_type(proto::kDitDirectory);
+                        dit_file->set_size(0);
+                    }
+                    if(boost::filesystem::is_regular_file(*it)) {
+                        // TODO opt_a
+                        dit_file->set_type(proto::kDitFile);
+                        uintmax_t file_size = boost::filesystem::file_size(*it);
+                        dit_file->set_size(file_size);
+                    }
+                    dit_file->set_path(it->path().string());
+                } catch (const std::exception& ex ){
+                    LOG(WARNING) << ex.what();
+                    continue;
+                }
             }
         }
-    } else {
-        //
+        done->Run();
     }
 
-    done->Run();
+    return;
 }
 
 void DitServerImpl::GetFileBlock(::google::protobuf::RpcController* controller,
                                  const proto::GetFileBlockRequest* request,
                                  proto::GetFileBlockResponse* response,
                                  ::google::protobuf::Closure* done) {
-    std::string path = request->block().name();
+    std::string path = request->block().path();
     int64_t offset = request->block().offset();
     int64_t length = request->block().length();
     LOG(INFO)
@@ -163,7 +143,7 @@ void DitServerImpl::GetFileBlock(::google::protobuf::RpcController* controller,
         int l = fread(buf, 1, length, fp);
         std::string content = std::string(buf, l);
         proto::DitFileBlock* block = response->mutable_block(); 
-        block->set_name(path);
+        block->set_path(path);
         block->set_offset(offset);
         block->set_length(l);
         block->set_content(content);

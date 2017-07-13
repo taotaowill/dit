@@ -16,9 +16,7 @@ typedef ::galaxy::ins::sdk::ScanResult ScanResult;
 struct DitPath {
     std::string server;
     std::string path;
-
 	DitPath() {};
-	DitPath(std::string server, std::string path) : server(server), path(path) {};
 };
 
 class DitClient {
@@ -26,13 +24,13 @@ public:
     DitClient();
     ~DitClient();
     void Ls(int argc, char* argv[]);
-    void Rm(int argc, char* argv[]);
     void Cp(int argc, char* argv[]);
+    void Rm(int argc, char* argv[]);
 //private:
-	bool ListServers();
+	bool Init();
     bool ParsePath(const std::string& raw_path, DitPath& dit_path);
     void GetFileBlock(proto::DitServer_Stub* stub,
-                      const proto::DitFile& file,
+                      const proto::DitFileMeta& file,
                       const std::string& src_path,
                       const std::string& dst_path);
     void GetFileBlockCallback(const std::string& src_path,
@@ -44,8 +42,8 @@ public:
     RpcClient rpc_client_;
 	InsSDK* nexus_;
     Mutex mutex_;
-    std::map<std::string, Mutex> files_mutex_;
     int done_;
+    ThreadPool pool_;
 };
 
 }

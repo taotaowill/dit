@@ -20,6 +20,11 @@ int main(int argc, char* argv[]) {
     }
 
     baidu::dit::DitClient* client = new baidu::dit::DitClient();
+    if(!client->Init()) {
+        fprintf(stderr, "-init client failed");
+        return -1;
+    }
+
     if (strcmp(argv[1], "ls") == 0) {
         if (argc < 3) {
             print_usage();

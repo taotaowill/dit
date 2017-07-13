@@ -8,10 +8,10 @@ enum Status {
 }
 
 enum Option {
-    kAll = 0;
-    kColor = 1;
-    kForce = 2;
-    kRecursive = 3;
+    kOptionAll = 0;
+    kOptionColor = 1;
+    kOptionForce = 2;
+    kOptionRecursive = 3;
 }
 
 enum DitFileType {
@@ -24,9 +24,9 @@ message ReturnCode {
     optional string message = 2;
 }
 
-message DitFile {
-    optional string name = 1;
-    optional DitFileType type = 2;
+message DitFileMeta {
+    optional DitFileType type = 1;
+    optional string path = 2;
     optional int64 size = 3;
     optional string group = 4; 
     optional string owner = 5; 
@@ -34,46 +34,35 @@ message DitFile {
 }
 
 message DitFileBlock {
-    optional string name = 1;
+    optional string path = 1;
     optional int64 offset = 2;
     optional int64 length = 3;
     optional bytes content = 4;
 }
 
-message LsRequest {
+//message RmRequest {
+//    optional string path = 1;
+//    repeated Option options = 2;
+//}
+//
+//message RmResponse {
+//    optional ReturnCode ret = 1;
+//}
+
+message PutFileMetaRequest {
+}
+
+message PutFileMetaReqeust {
+}
+
+message GetFileMetaRequest {
     optional string path = 1;
     repeated Option options = 2;
 }
 
-message LsResponse {
+message GetFileMetaResponse {
     optional ReturnCode ret = 1;
-    repeated DitFile files = 2;
-}
-
-message RmRequest {
-    optional string path = 1;
-}
-
-message RmResponse {
-    optional ReturnCode ret = 1;
-}
-
-message PutRequest {
-    repeated DitFile files = 1;
-    optional string dest_path = 2;
-}
-
-message PutResponse {
-    optional ReturnCode ret = 1;
-}
-
-message GetRequest {
-    optional string path = 1;
-}
-
-message GetResponse {
-    optional ReturnCode ret = 1;
-    repeated DitFile files = 2;
+    repeated DitFileMeta files = 2;
 }
 
 message GetFileBlockRequest {
@@ -86,12 +75,9 @@ message GetFileBlockResponse {
 }
 
 service DitServer {
-    rpc Ls(LsRequest) returns (LsResponse);
-    //rpc Cp(CpRequest) returns (CpResponse);
-    //rpc Mv(MvRequest) returns (MvResponse);
-    rpc Rm(RmRequest) returns (RmResponse);
-    rpc Get(GetRequest) returns (GetResponse);
-    rpc Put(PutRequest) returns (PutResponse);
+    rpc GetFileMeta(GetFileMetaRequest) returns (GetFileMetaResponse);
+    //rpc PutFileMeta(PutFileMetaRequest) returns (PutFileMetaResponse);
     rpc GetFileBlock(GetFileBlockRequest) returns (GetFileBlockResponse);
+    //rpc PutFileBlocl(PutFileBlockRequest) returns (PutFileBlockResponse);
 }
 

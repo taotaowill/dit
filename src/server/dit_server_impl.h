@@ -20,15 +20,11 @@ class DitServerImpl: public proto::DitServer {
 public:
     DitServerImpl();
     ~DitServerImpl();
-    void Ls(::google::protobuf::RpcController* controller,
-            const proto::LsRequest* request,
-            proto::LsResponse* response,
-            ::google::protobuf::Closure* done);
-    void Get(::google::protobuf::RpcController* controller,
-             const proto::GetRequest* request,
-             proto::GetResponse* response,
-             ::google::protobuf::Closure* done);
     bool RegisterOnNexus(const std::string& endpoint);
+    void GetFileMeta(::google::protobuf::RpcController* controller,
+                     const proto::GetFileMetaRequest* request,
+                     proto::GetFileMetaResponse* response,
+                     ::google::protobuf::Closure* done);
     void GetFileBlock(::google::protobuf::RpcController* controller,
                       const proto::GetFileBlockRequest* request,
                       proto::GetFileBlockResponse* response,
