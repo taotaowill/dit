@@ -182,7 +182,7 @@ fi
 # common
 if [ ! -f "${FLAG_DIR}/common" ] \
     || [ ! -f "${DEPS_PREFIX}/lib/libcommon.a" ] \
-    || [ ! -f "${DEPS_PREFIX}/include/mutex.h" ]; then
+    || [ ! -f "${DEPS_PREFIX}/include/common/mutex.h" ]; then
     rm -rf common
     git clone https://github.com/baidu/common
     cd common
