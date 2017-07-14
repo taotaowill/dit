@@ -135,15 +135,25 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
         }
 
         if (opt_r) {
-            boost::filesystem::recursive_directory_iterator end_dir_it(path), it;
-            travel_files(end_dir_it, it, response, opt_a);
+            try {
+                boost::filesystem::recursive_directory_iterator end_dir_it(path), it;
+                travel_files(end_dir_it, it, response, opt_a);
+            } catch (const std::exception& e) {
+                response->mutable_ret()->set_status(proto::kError);
+                response->mutable_ret()->set_message(e.what());
+            }
         } else {
-            boost::filesystem::directory_iterator end_dir_it(path), it;
-            travel_files(end_dir_it, it, response, opt_a);
+            try {
+                boost::filesystem::directory_iterator end_dir_it(path), it;
+                travel_files(end_dir_it, it, response, opt_a);
+            } catch (const std::exception& e) {
+                response->mutable_ret()->set_status(proto::kError);
+                response->mutable_ret()->set_message(e.what());
+            }
         }
     }
-    done->Run();
 
+    done->Run();
     return;
 }
 
