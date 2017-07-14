@@ -3,14 +3,15 @@
 #include "dit_client.h"
 
 void print_usage() {
-    printf("Usage:\ndit <command> path\n");
-    printf("\tcommand:\n");
-    printf("\t\tls <path> [-options]: list the directory, options: a|c \n");
-    printf("\t\tcp <srcpath> <destpath> [-options]: copy directory or file, options: r|f\n");
-    printf("\t\tmv <srcpath> <destpath> [-options]: rename directory or file, options: r|f\n");
-    printf("\t\trm <path> [-options]: remove direcory or file, options: r|f\n");
-    printf("\t\tget <ditfile> <localfile> : copy file from dit to local\n");
-    printf("\t\tput <localfile> <ditfile> : copy file from local to dit\n");
+    printf("Usage: dit COMMAND [OPTION]... [PATH]...\n");
+    printf("commands:\n");
+    printf("  ls PATH [-a] [-c]: list path\n");
+    printf("  cp SRC_PATH DST_PATH [-r] [-f]: copy path\n");
+    printf("  rm PATH [-r] [-f]: remove path\n");
+    printf("options:\n");
+    printf("  -r: travel directories recursively\n");
+    printf("  -f: do not prompt before overwriting\n");
+    printf("  -a: do not ignore entries starting with .\n");
 }
 
 int main(int argc, char* argv[]) {

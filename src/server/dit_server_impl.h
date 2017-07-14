@@ -31,8 +31,12 @@ public:
                       ::google::protobuf::Closure* done);
 private:
     bool Init();
+    void HandleGetFileBlock(::google::protobuf::RpcController* controller,
+                            const proto::GetFileBlockRequest* request,
+                            proto::GetFileBlockResponse* response,
+                            ::google::protobuf::Closure* done);
 private:
-    ThreadPool background_pool_;
+    ThreadPool pool_;
     Mutex mutex_;
     InsSDK* nexus_;
     std::string endpoint_;

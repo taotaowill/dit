@@ -31,13 +31,10 @@ public:
     bool ParsePath(const std::string& raw_path, DitPath& dit_path);
     void GetFileBlock(proto::DitServer_Stub* stub,
                       const proto::DitFileMeta& file,
+                      int64_t offset,
+                      int64_t length,
                       const std::string& src_path,
                       const std::string& dst_path);
-    void GetFileBlockCallback(const std::string& src_path,
-                              const std::string& dst_path,
-                              const proto::GetFileBlockRequest* request,
-                              proto::GetFileBlockResponse* response,
-                              bool failed, int /*error*/);
     std::map<std::string, proto::DitServer_Stub*> servers_;
     RpcClient rpc_client_;
 	InsSDK* nexus_;

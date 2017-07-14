@@ -19,11 +19,12 @@
 DECLARE_string(nexus_addr);
 DECLARE_string(nexus_root);
 DECLARE_string(server_nexus_prefix);
+DECLARE_int64(file_block_size);
 
 namespace baidu {
 namespace dit {
 
-DitClient::DitClient() : pool_(10) {
+DitClient::DitClient() : pool_(1) {
 	nexus_ = new InsSDK(FLAGS_nexus_addr);
 }
 
@@ -136,7 +137,7 @@ void DitClient::Ls(int argc, char* argv[]) {
 
     for (int i=0; i<response.files_size(); i++) {
         const proto::DitFileMeta& file = response.files(i);
-        fprintf(stdout, "+%s\n", file.path().c_str());
+        fprintf(stdout, "%13ld\t%s\n", file.size(), file.path().c_str());
     }
 
     return;
@@ -166,7 +167,7 @@ void DitClient::Cp(int argc, char* argv[]) {
     }
    
     if (dst_dit_path.server != "") {
-        fprintf(stderr, "-dst server must not be local\n");
+        fprintf(stderr, "-dst server must be local\n");
         return;
     }
 
@@ -184,6 +185,7 @@ void DitClient::Cp(int argc, char* argv[]) {
         }
     }
 
+    // cp from remote to local
     proto::DitServer_Stub* src_stub = src_it->second;
     proto::GetFileMetaRequest* request = new proto::GetFileMetaRequest;
     proto::GetFileMetaResponse* response = new proto::GetFileMetaResponse;
@@ -201,27 +203,48 @@ void DitClient::Cp(int argc, char* argv[]) {
         return;
     }
 
-    int count = response->files_size();
+    int count = 0;
     fprintf(stdout, "+all files: %d\n", count);
     done_ = 0;
+    // is dir
+    if (response->files_size() > 1 && dst_path[dst_path.size() - 1] != '/') {
+        dst_path += '/';
+    }
     for (int i=0; i<response->files_size(); i++) {
         const proto::DitFileMeta& file = response->files(i);
         if (proto::kDitDirectory == file.type()) {
             // create_directory
             std::string rel_path = file.path();
             boost::algorithm::replace_first(rel_path, src_path, dst_path);
-            fprintf(stdout, "+[%s] [%s]\n", file.path().c_str(), rel_path.c_str());
             if (!boost::filesystem::exists(rel_path)) {
                 boost::filesystem::create_directory(rel_path);
             }
             {
                 MutexLock lock(&mutex_);
+                count++;
                 done_++;
             }
         } else {
-            // download file
-            pool_.AddTask(boost::bind(&DitClient::GetFileBlock, this, src_stub, file,
-                                     src_path, dst_path));
+            // download file, split file into block
+            int64_t block_cout = file.size() / FLAGS_file_block_size; 
+            int64_t last = file.size() % FLAGS_file_block_size;
+            for (int i=0; i<block_cout; ++i) {
+                int64_t offset = FLAGS_file_block_size * i;
+                pool_.AddTask(boost::bind(&DitClient::GetFileBlock, this,
+                                          src_stub, file,
+                                          offset,
+                                          FLAGS_file_block_size,
+                                          src_path, dst_path));
+                count++;
+            }
+            if (last) {
+                int64_t offset = file.size() - last;
+                pool_.AddTask(boost::bind(&DitClient::GetFileBlock, this,
+                                          src_stub, file,
+                                          offset, last,
+                                          src_path, dst_path));
+                count++;
+            }
         }
     }
 
@@ -234,31 +257,28 @@ void DitClient::Cp(int argc, char* argv[]) {
 
 void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
                              const proto::DitFileMeta& file,
+                             int64_t offset,
+                             int64_t length,
                              const std::string& src_path,
                              const std::string& dst_path) {
     proto::GetFileBlockRequest* request = new proto::GetFileBlockRequest;
     proto::GetFileBlockResponse* response = new proto::GetFileBlockResponse;
     proto::DitFileBlock* block = request->mutable_block();
-    block->set_offset(0);
-    block->set_length(file.size());
+    block->set_offset(offset);
+    block->set_length(length);
     block->set_path(file.path());
-    boost::function<void (const proto::GetFileBlockRequest*, proto::GetFileBlockResponse*, bool, int)> callback;
-    callback = boost::bind(&DitClient::GetFileBlockCallback, this, src_path, dst_path, _1, _2, _3, _4);
-    rpc_client_.AsyncRequest(stub, &proto::DitServer_Stub::GetFileBlock,
-                             request, response,
-                             callback, 30, 1);
-    return;
-}
+    bool ret = rpc_client_.SendRequest(stub, &proto::DitServer_Stub::GetFileBlock,
+                                       request, response, 30, 1);
 
-void DitClient::GetFileBlockCallback(const std::string& src_path,
-                                     const std::string& dst_path,
-                                     const proto::GetFileBlockRequest* request,
-                                     proto::GetFileBlockResponse* response,
-                                     bool failed, int /*error*/) {
-    fprintf(stdout, "--- FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
-            response->block().path().c_str(),
-            response->block().offset(),
-            response->block().length());
+    if (!ret) {
+        fprintf(stderr, "-get file block rpc failed");
+        return;
+    }
+
+    if (proto::kOk != response->ret().status()) {
+        fprintf(stderr, "-get file block error: %s", response->ret().message().c_str());
+        return;
+    }
 
     std::string path = response->block().path();
     boost::algorithm::replace_first(path, src_path, dst_path);
@@ -273,8 +293,10 @@ void DitClient::GetFileBlockCallback(const std::string& src_path,
                 block.offset(),
                 block.length());
     } else {
+        perror("fopen");
         fprintf(stderr, "-write file block failed, file: %s\n", request->block().path().c_str());
     }
+
     { 
         MutexLock lock(&mutex_);
         ++done_;

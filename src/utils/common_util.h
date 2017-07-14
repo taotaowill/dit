@@ -5,10 +5,15 @@
 namespace baidu {
 namespace dit {
 
+namespace uuid {
 std::string generate_uuid() {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
     const std::string tmp = boost::uuids::to_string(uuid);
     return tmp;
+}
+}
+
+namespace file {
 }
 
 }

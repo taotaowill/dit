@@ -7,7 +7,6 @@
 #include "client/dit_client.h"
 
 TEST(DitClient, ParsePath) {
-	//std::string raw_path = "/wanghaitao01-pc:9999//home/wanghaitao01";
 	std::string raw_path = "/wanghaitao01-pc:9999/";
 	::baidu::dit::DitPath dit_path;
 	::baidu::dit::DitClient* c = new ::baidu::dit::DitClient();
