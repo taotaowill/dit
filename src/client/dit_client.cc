@@ -96,6 +96,15 @@ bool DitClient::ParsePath(const std::string& raw_path, DitPath& dit_path) {
 void DitClient::Ls(int argc, char* argv[]) {
     // parse path
     std::string raw_path = std::string(argv[0]);
+    // show servers
+    if (raw_path == "/") {
+        std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.begin();
+        for (; it != servers_.end(); ++it) {
+            fprintf(stdout, "/%s\n", it->first.c_str());
+        }
+        return;
+    }
+
     DitPath dit_path;
 	bool ret = ParsePath(raw_path, dit_path);
     if (!ret) {
