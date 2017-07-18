@@ -1,5 +1,5 @@
 ### virtial file system
-#### put directory on multi machines into one directory structure
+#### orgnize directorys on multi machines into one root
 ```
 /
 ├── 192.168.1.1:8888
@@ -13,12 +13,15 @@
 ```
 
 ### server
+```
 ./ditd
+```
 
 
 ### client
-./dit
 ```
+./dit
+
 Usage: dit COMMAND [OPTION]... [PATH]...
 commands:
   ls PATH [-a] [-c]: list path
