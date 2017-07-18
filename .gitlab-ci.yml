@@ -1,0 +1,18 @@
+stages:
+  - install_deps
+  - build
+
+install_deps:
+  stage: install_deps
+  only:
+    - master
+  script:
+    - sudo apt-get install scons
+    - sh build_deps.sh
+
+build:
+  stage: build
+  only:
+    - master
+  script:
+    - scons
