@@ -44,11 +44,11 @@ options:
 ```
 ./dit ls /192.168.1.1:8888/home/work -ra
 
-/home/work/
-/home/work/a/
-/home/work/a/a.txt
-/home/work/b/
-/home/work/b/c
+/192.168.1.1:8888/home/work/
+/192.168.1.1:8888/home/work/a/
+/192.168.1.1:8888/home/work/a/a.txt
+/192.168.1.1:8888/home/work/b/
+/192.168.1.1:8888/home/work/b/c
 ```
 
 #### cp
