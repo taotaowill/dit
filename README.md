@@ -36,7 +36,18 @@ options:
 #### ls
 ```
 ./dit ls /
+
+/192.168.1.1:8888
+/192.168.1.2:8888
+
+
 ./dit ls /192.168.1.1:8888/home/work -ra
+
+/home/work/
+/home/work/a/
+/home/work/a/a.txt
+/home/work/b/
+/home/work/b/c
 ```
 
 #### cp
