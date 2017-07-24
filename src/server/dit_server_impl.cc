@@ -13,7 +13,9 @@
 #include "proto/dit.pb.h"
 #include "utils/common_util.h"
 
-DECLARE_string(nexus_addr); DECLARE_string(nexus_root); DECLARE_string(server_nexus_prefix);
+DECLARE_string(nexus_addr);
+DECLARE_string(nexus_root);
+DECLARE_string(server_nexus_prefix);
 DECLARE_int32(server_thread_num);
 DECLARE_int64(dir_size);
 

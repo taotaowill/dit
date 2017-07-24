@@ -6,6 +6,7 @@
 #include <sofa/pbrpc/pbrpc.h>
 #include <common/util.h>
 
+#include "utils/common_util.h"
 #include "utils/setting_util.h"
 #include "server/dit_server_impl.h"
 
@@ -23,7 +24,7 @@ int main(int argc, char* argv[]) {
     SetupLog("ditd");
 
     baidu::dit::DitServerImpl* dit_server = new baidu::dit::DitServerImpl();
-    std::string endpoint = ::baidu::common::util::GetLocalHostName() + ":" + FLAGS_server_port;
+    std::string endpoint = ::baidu::dit::net::GetLocalIP() + ":" + FLAGS_server_port;
     if (!dit_server->RegisterOnNexus(endpoint)) {
         LOG(FATAL) << "register on nexus failed";
         exit(-1);
