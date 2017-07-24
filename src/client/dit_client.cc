@@ -24,12 +24,12 @@ DECLARE_int64(file_block_size);
 namespace baidu {
 namespace dit {
 
-DitClient::DitClient() : pool_(1) {
-	nexus_ = new InsSDK(FLAGS_nexus_addr);
+DitClient::DitClient() : pool_(10) {
+    nexus_ = new InsSDK(FLAGS_nexus_addr);
 }
 
 DitClient::~DitClient() {
-	delete nexus_;
+    delete nexus_;
     std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.begin();
     for (; it!=servers_.end(); ++it) {
         if (NULL != it->second) {
@@ -43,13 +43,13 @@ bool DitClient::Init() {
 
     // get servers endpoints
     std::vector<std::string> endpoints;
-	std::string full_prefix = FLAGS_nexus_root + FLAGS_server_nexus_prefix;
+    std::string full_prefix = FLAGS_nexus_root + FLAGS_server_nexus_prefix;
     ScanResult* result = nexus_->Scan(full_prefix + "/", full_prefix + "/\xff");
     size_t prefix_len = full_prefix.size() + 1;
     while (!result->Done()) {
         const std::string& full_key = result->Key();
         std::string key = full_key.substr(prefix_len);
-		endpoints.push_back(key);
+        endpoints.push_back(key);
         result->Next();
     }
 
@@ -106,7 +106,7 @@ void DitClient::Ls(int argc, char* argv[]) {
     }
 
     DitPath dit_path;
-	bool ret = ParsePath(raw_path, dit_path);
+    bool ret = ParsePath(raw_path, dit_path);
     if (!ret) {
         fprintf(stderr, "-path parse failed\n");
         return;
@@ -121,7 +121,7 @@ void DitClient::Ls(int argc, char* argv[]) {
     proto::GetFileMetaRequest request;
     proto::GetFileMetaResponse response;
     request.set_path(dit_path.path);
- 
+
     // parse options
     if (argc > 1) {
         std::string options_str = argv[1];
@@ -174,7 +174,7 @@ void DitClient::Cp(int argc, char* argv[]) {
         fprintf(stderr, "-src server should not be local\n");
         return;
     }
-   
+
     if (dst_dit_path.server != "") {
         fprintf(stderr, "-dst server must be local\n");
         return;
@@ -212,8 +212,8 @@ void DitClient::Cp(int argc, char* argv[]) {
         return;
     }
 
+    fprintf(stdout, "+all files: %d\n", response->files_size());
     int count = 0;
-    fprintf(stdout, "+all files: %d\n", count);
     done_ = 0;
     // is dir
     if (response->files_size() > 1 && dst_path[dst_path.size() - 1] != '/') {
@@ -297,16 +297,16 @@ void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
         fseek(fp, 0, SEEK_SET);
         fwrite(block.content().c_str(), 1, block.length(), fp);
         fclose(fp);
-        fprintf(stdout, "+++ FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
-                block.path().c_str(),
-                block.offset(),
-                block.length());
+        //fprintf(stdout, "+++ FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
+        //        block.path().c_str(),
+        //        block.offset(),
+        //        block.length());
     } else {
         perror("fopen");
         fprintf(stderr, "-write file block failed, file: %s\n", request->block().path().c_str());
     }
 
-    { 
+    {
         MutexLock lock(&mutex_);
         ++done_;
     }
