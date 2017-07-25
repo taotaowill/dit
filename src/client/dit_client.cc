@@ -1,6 +1,11 @@
 #include "client/dit_client.h"
 
+#include <ctype.h>
+#include <error.h>
+#include <fcntl.h>
 #include <stdio.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <vector>
 
 #include <boost/bind.hpp>
@@ -20,12 +25,15 @@ DECLARE_string(nexus_addr);
 DECLARE_string(nexus_root);
 DECLARE_string(server_nexus_prefix);
 DECLARE_int64(file_block_size);
+DECLARE_int32(client_thread_num);
 
 namespace baidu {
 namespace dit {
 
-DitClient::DitClient() : pool_(10) {
+DitClient::DitClient() : pool_(FLAGS_client_thread_num) {
     nexus_ = new InsSDK(FLAGS_nexus_addr);
+    pthread_mutex_init(&pmutex_, NULL);
+    pthread_cond_init(&pcond_, NULL);
 }
 
 DitClient::~DitClient() {
@@ -146,7 +154,7 @@ void DitClient::Ls(int argc, char* argv[]) {
 
     for (int i=0; i<response.files_size(); i++) {
         const proto::DitFileMeta& file = response.files(i);
-        fprintf(stdout, "%13ld\t%s\n", file.size(), file.path().c_str());
+        fprintf(stdout, "%o\t%13ld\t%s\t\n", file.perms(), file.size(), file.path().c_str());
     }
 
     return;
@@ -212,6 +220,7 @@ void DitClient::Cp(int argc, char* argv[]) {
         return;
     }
 
+
     fprintf(stdout, "+all files: %d\n", response->files_size());
     int count = 0;
     done_ = 0;
@@ -228,38 +237,68 @@ void DitClient::Cp(int argc, char* argv[]) {
             if (!boost::filesystem::exists(rel_path)) {
                 boost::filesystem::create_directory(rel_path);
             }
+            count += 1;
             {
                 MutexLock lock(&mutex_);
-                count++;
                 done_++;
             }
         } else {
-            // download file, split file into block
-            int64_t block_cout = file.size() / FLAGS_file_block_size; 
+            // download file
+            std::string file_path = file.path();
+            boost::algorithm::replace_first(file_path, src_path, dst_path);
+
+            int fd = open(file_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+            if(fd == -1) {
+                fprintf(stderr, "file open failed, %s\n", strerror(errno));
+                continue;
+            }
+
+            if (ftruncate(fd, file.size()) < 0) {
+                close(fd);
+                continue;
+            }
+            char* ptr = (char*) mmap(NULL, file.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if(ptr == MAP_FAILED) {
+                fprintf(stderr, "map failed!\n");
+                close(fd);
+                continue;
+            }
+            close(fd);
+
+            // split file block
+            int64_t block_cout = file.size() / FLAGS_file_block_size;
             int64_t last = file.size() % FLAGS_file_block_size;
+            count += last ? block_cout + 1 : block_cout;
+
             for (int i=0; i<block_cout; ++i) {
                 int64_t offset = FLAGS_file_block_size * i;
                 pool_.AddTask(boost::bind(&DitClient::GetFileBlock, this,
                                           src_stub, file,
                                           offset,
                                           FLAGS_file_block_size,
-                                          src_path, dst_path));
-                count++;
+                                          ptr));
             }
             if (last) {
                 int64_t offset = file.size() - last;
                 pool_.AddTask(boost::bind(&DitClient::GetFileBlock, this,
                                           src_stub, file,
                                           offset, last,
-                                          src_path, dst_path));
-                count++;
+                                          ptr));
             }
         }
     }
 
-    while(done_ < count) {
-        usleep(500);
+    while (done_ < count) {
+        pthread_cond_wait(&pcond_, &pmutex_);
     }
+
+    if (done_ == count) {
+        fprintf(stdout, "all file download ok\n");
+    }
+
+    //if (munmap(ptr, file.size()) == -1) {
+    //    fprintf(stdout, "ummap!\n");
+    //}
 
     return;
 }
@@ -268,8 +307,7 @@ void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
                              const proto::DitFileMeta& file,
                              int64_t offset,
                              int64_t length,
-                             const std::string& src_path,
-                             const std::string& dst_path) {
+                             char* fp) {
     proto::GetFileBlockRequest* request = new proto::GetFileBlockRequest;
     proto::GetFileBlockResponse* response = new proto::GetFileBlockResponse;
     proto::DitFileBlock* block = request->mutable_block();
@@ -289,27 +327,18 @@ void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
         return;
     }
 
-    std::string path = response->block().path();
-    boost::algorithm::replace_first(path, src_path, dst_path);
-    FILE* fp;
-    if ((fp = fopen(path.c_str(), "wb")) != NULL) {
-        const proto::DitFileBlock& block = response->block();
-        fseek(fp, 0, SEEK_SET);
-        fwrite(block.content().c_str(), 1, block.length(), fp);
-        fclose(fp);
-        //fprintf(stdout, "+++ FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
-        //        block.path().c_str(),
-        //        block.offset(),
-        //        block.length());
-    } else {
-        perror("fopen");
-        fprintf(stderr, "-write file block failed, file: %s\n", request->block().path().c_str());
-    }
+    memcpy(fp + response->block().offset(), response->block().content().c_str(), response->block().length());
+    //fprintf(stdout, "+++ FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
+    //        response->block().path().c_str(),
+    //        response->block().offset(),
+    //        response->block().length());
 
     {
         MutexLock lock(&mutex_);
         ++done_;
+        pthread_cond_signal(&pcond_);
     }
+
     return;
 }
 

@@ -1,5 +1,6 @@
-#include <iostream>
+#include <stdio.h>
 #include <fstream>
+#include <iostream>
 
 #include <boost/any.hpp>
 #include <boost/filesystem.hpp>
@@ -49,17 +50,21 @@ void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool
                 dit_file->set_type(proto::kDitDirectory);
                 dit_file->set_size(FLAGS_dir_size);
                 dit_file->set_path(it->path().string() + "/");
+                dit_file->set_perms(boost::filesystem::status(it->path()).permissions());
             }
             if(boost::filesystem::is_regular_file(*it)) {
+                boost::filesystem::file_status file_status = boost::filesystem::status(it->path());
                 std::string filename = it->path().filename().string();
                 if (!opt_a && filename[0] == '.') {
                     continue;
                 }
                 proto::DitFileMeta* dit_file = response->add_files();
+                dit_file->set_perms(file_status.permissions());
                 dit_file->set_type(proto::kDitFile);
                 uintmax_t file_size = boost::filesystem::file_size(*it);
                 dit_file->set_size(file_size);
                 dit_file->set_path(it->path().string());
+                dit_file->set_perms(boost::filesystem::status(it->path()).permissions());
             }
         } catch (const std::exception& ex ){
             LOG(WARNING) << ex.what();
@@ -91,6 +96,7 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
     // file
     if (boost::filesystem::is_regular_file(path)) {
         proto::DitFileMeta* dit_file = response->add_files();
+        dit_file->set_perms(boost::filesystem::status(path).permissions());
         dit_file->set_path(path.string());
         dit_file->set_type(proto::kDitFile);
         uintmax_t file_size = boost::filesystem::file_size(path);
@@ -103,6 +109,7 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
     if (boost::filesystem::is_symlink(path)) {
         proto::DitFileMeta* dit_file = response->add_files();
         dit_file->set_type(proto::kDitSymlink);
+        dit_file->set_perms(boost::filesystem::status(path).permissions());
         dit_file->set_path(path.string());
         dit_file->set_canonical(boost::filesystem::canonical(path).string());
         dit_file->set_size(1);
@@ -120,6 +127,7 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
         }
         // add dir self
         proto::DitFileMeta* dit_file = response->add_files();
+        dit_file->set_perms(boost::filesystem::status(path).permissions());
         dit_file->set_path(dir_path);
         dit_file->set_type(proto::kDitDirectory);
         dit_file->set_size(FLAGS_dir_size);
@@ -185,6 +193,7 @@ void DitServerImpl::HandleGetFileBlock(::google::protobuf::RpcController* contro
 
     FILE* fp;
     if (NULL != (fp = fopen(path.c_str(), "rb"))) {
+        fseek(fp, offset, SEEK_SET);
         char * buf = new char[length];
         int l = fread(buf, 1, length, fp);
         std::string content = std::string(buf, l);

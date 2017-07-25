@@ -1,6 +1,8 @@
 #pragma once
 
+#include <pthread.h>
 #include <string>
+
 #include <ins_sdk.h>
 #include <common/mutex.h>
 
@@ -33,14 +35,15 @@ public:
                       const proto::DitFileMeta& file,
                       int64_t offset,
                       int64_t length,
-                      const std::string& src_path,
-                      const std::string& dst_path);
+                      char* fp);
     std::map<std::string, proto::DitServer_Stub*> servers_;
     RpcClient rpc_client_;
     InsSDK* nexus_;
     Mutex mutex_;
     int done_;
     ThreadPool pool_;
+    pthread_mutex_t pmutex_;
+    pthread_cond_t pcond_;
 };
 
 }

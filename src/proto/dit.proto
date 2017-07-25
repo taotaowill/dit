@@ -30,9 +30,12 @@ message DitFileMeta {
     optional string path = 2;
     optional string canonical = 3;
     optional int64 size = 4;
-    optional string group = 5; 
-    optional string owner = 6; 
-    optional int64 modified = 7;
+    optional string group = 5;
+    optional string owner = 6;
+    optional int32 perms = 7;
+    optional int64 accessed = 8;
+    optional int64 modified = 9;
+    optional int64 changed = 10;
 }
 
 message DitFileBlock {
