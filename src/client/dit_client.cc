@@ -36,9 +36,6 @@ namespace baidu {
 namespace dit {
 
 DitClient::DitClient() : pool_(FLAGS_client_thread_num) {
-    ::sofa::pbrpc::RpcClientOptions options;
-    options.max_throughput_in = FLAGS_client_throughput;
-    rpc_client_.ResetOptions(options);
     nexus_ = new InsSDK(FLAGS_nexus_addr);
     pthread_mutex_init(&pmutex_, NULL);
     pthread_cond_init(&pcond_, NULL);
@@ -56,7 +53,6 @@ DitClient::~DitClient() {
 
 bool DitClient::Init() {
     bool ret = true;
-
     // get servers endpoints
     std::vector<std::string> endpoints;
     std::string full_prefix = FLAGS_nexus_root + FLAGS_nexus_server_prefix;
@@ -156,7 +152,7 @@ void DitClient::Ls(int argc, char* argv[]) {
 
     for (int i=0; i<response.files_size(); i++) {
         const proto::DitFileMeta& file = response.files(i);
-        fprintf(stdout, "%o\t%13ld\t%s\t\n", file.perms(), file.size(), file.path().c_str());
+        fprintf(stdout, "%o\t%10ld\t%s\t\n", file.perms(), file.size(), file.path().c_str());
     }
 
     return;
@@ -223,7 +219,7 @@ void DitClient::Cp(int argc, char* argv[]) {
     }
 
 
-    fprintf(stdout, "+all files: %d\n", response->files_size());
+    fprintf(stdout, "total %d\n", response->files_size());
     int count = 0;
     done_ = 0;
     // is dir
@@ -294,10 +290,7 @@ void DitClient::Cp(int argc, char* argv[]) {
         pthread_cond_wait(&pcond_, &pmutex_);
     }
 
-    if (done_ == count) {
-        fprintf(stdout, "all file download ok\n");
-    }
-
+    // TODO munmap
     //if (munmap(ptr, file.size()) == -1) {
     //    fprintf(stdout, "ummap!\n");
     //}

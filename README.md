@@ -28,6 +28,7 @@ commands:
   cp SRC_PATH DST_PATH [-r] [-f]: copy path
   rm PATH [-r] [-f]: remove path
 options:
+  it is recommend to place options at the end of line
   -a: do not ignore entries starting with .
   -c: control whether color is used to distinguish file
   -f: do not prompt before overwriting

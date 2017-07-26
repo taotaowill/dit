@@ -164,17 +164,31 @@ if [ ! -f "${FLAG_DIR}/gperftools_2_2_1" ] \
 fi
 
 # ins
+#if [ ! -f "${FLAG_DIR}/ins" ] \
+#    || [ ! -f "${DEPS_PREFIX}/lib/libins_sdk.a" ] \
+#    || [ ! -f "${DEPS_PREFIX}/include/ins_sdk.h" ]; then
+#    rm -rf ins
+#    git clone https://github.com/baidu/ins
+#    cd ins
+#    sed -i "s|^PREFIX=.*|PREFIX=${DEPS_PREFIX}|" Makefile
+#    sed -i "s|^PROTOC ?=.*|PROTOC=${DEPS_PREFIX}/bin/protoc|" Makefile
+#    sed -i "s|^GFLAGS_PATH ?=.*|GFLAGS_PATH=${DEPS_PREFIX}|" Makefile
+#    export BOOST_PATH=${DEPS_PREFIX}/boost_1_57_0
+#    make -j4 default >/dev/null && make -j4 install_sdk >/dev/null
+#    cd -
+#    touch "${FLAG_DIR}/ins"
+#fi
 if [ ! -f "${FLAG_DIR}/ins" ] \
     || [ ! -f "${DEPS_PREFIX}/lib/libins_sdk.a" ] \
     || [ ! -f "${DEPS_PREFIX}/include/ins_sdk.h" ]; then
-    rm -rf ins
-    git clone https://github.com/baidu/ins
-    cd ins
+    wget --no-check-certificate http://gitlab.baidu.com/wanghaitao01/packages/raw/master/ins-0.15.tar.gz
+    tar xzf ins-0.15.tar.gz
+    cd ins-0.15
     sed -i "s|^PREFIX=.*|PREFIX=${DEPS_PREFIX}|" Makefile
-    sed -i "s|^PROTOC ?=.*|PROTOC=${DEPS_PREFIX}/bin/protoc|" Makefile
-    sed -i "s|^GFLAGS_PATH ?=.*|GFLAGS_PATH=${DEPS_PREFIX}|" Makefile
+    sed -i "s|^PROTOC=.*|PROTOC=${DEPS_PREFIX}/bin/protoc|" Makefile
     export BOOST_PATH=${DEPS_PREFIX}/boost_1_57_0
-    make -j4 default >/dev/null && make -j4 install_sdk >/dev/null
+    make -j4 ins >/dev/null && make -j4 install_sdk >/dev/null
+    mkdir -p output/bin && cp ins output/bin
     cd -
     touch "${FLAG_DIR}/ins"
 fi

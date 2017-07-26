@@ -5,6 +5,7 @@
 #include <glog/logging.h>
 #include <sofa/pbrpc/pbrpc.h>
 #include <common/util.h>
+#include <boost/filesystem.hpp>
 
 #include "utils/common_util.h"
 #include "utils/setting_util.h"
@@ -18,6 +19,19 @@ static void SignalIntHandler(int /*sig*/) {
 }
 
 int main(int argc, char* argv[]) {
+    bool has_flagfile = false;
+    for (int i=0; i<argc; i++) {
+        if (strncmp(argv[i], "--flagfile", 10) == 0) {
+            has_flagfile = true;
+            break;
+        }
+    }
+    if (!has_flagfile) {
+        if (boost::filesystem::exists("./dit.flag")) {
+            argv[argc] = "--flagfile=./dit.flag";
+            argc++;
+        }
+    }
     google::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
     google::SetStderrLogging(google::GLOG_INFO);
