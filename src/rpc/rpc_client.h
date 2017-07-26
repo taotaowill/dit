@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <glog/logging.h>

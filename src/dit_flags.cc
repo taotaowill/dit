@@ -7,8 +7,8 @@ DEFINE_string(nexus_server_prefix, "/server", "the dit server prefix on nexus");
 DEFINE_string(server_port, "8899", "the rpc port of dit_server");
 DEFINE_int64(file_block_size, 2097152, "file block size limit, bytes");
 DEFINE_int32(file_block_timeout, 3000, "get file block timeout, ms");
-DEFINE_int32(server_thread_num, 100, "server threads num");
-DEFINE_int32(client_thread_num, 64, "client threads num");
+DEFINE_int32(server_thread_num, 20, "server threads num");
+DEFINE_int32(client_thread_num, 10, "client threads num");
 DEFINE_int32(client_throughput, 1000, "client throughout rate, MB/s");
 
 // command options

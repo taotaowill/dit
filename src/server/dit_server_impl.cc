@@ -12,6 +12,7 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <snappy.h>
 
 #include "dit_server_impl.h"
 #include "proto/dit.pb.h"
@@ -195,12 +196,13 @@ void DitServerImpl::HandleGetFileBlock(::google::protobuf::RpcController* contro
     if(fd > 0) {
         char* ptr = (char*) mmap(NULL, length, PROT_READ, MAP_SHARED, fd, offset);
         close(fd);
-        std::string content = std::string(ptr, length);
+        std::string z_content;
+        snappy::Compress(ptr, length, &z_content);
         proto::DitFileBlock* block = response->mutable_block();
         block->set_path(path);
         block->set_offset(offset);
-        block->set_length(length);
-        block->set_content(content);
+        block->set_length(z_content.length());
+        block->set_content(z_content);
         response->mutable_ret()->set_status(proto::kOk);
         VLOG(20)
             << "--- FileBlock, file: [" << path

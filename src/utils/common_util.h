@@ -1,4 +1,5 @@
 #pragma once
+
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <stdio.h>
@@ -53,4 +54,3 @@ static std::string GetLocalIP() {
 
 }
 }
-

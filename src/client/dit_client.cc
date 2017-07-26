@@ -18,6 +18,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <gflags/gflags.h>
 #include <common/thread_pool.h>
+#include <snappy.h>
 
 #include "proto/dit.pb.h"
 
@@ -220,7 +221,6 @@ void DitClient::Cp(int argc, char* argv[]) {
         return;
     }
 
-
     fprintf(stdout, "total item %d\n", response->files_size());
     int count = 0;
     int64_t total_size = 0;
@@ -362,7 +362,9 @@ void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
         return;
     }
 
-    memcpy(fp + response->block().offset(), response->block().content().c_str(), response->block().length());
+    std::string content;
+    snappy::Uncompress(response->block().content().c_str(), response->block().length(), &content);
+    memcpy(fp + response->block().offset(), content.c_str(), content.size());
 
     {
         MutexLock lock(&mutex_);
