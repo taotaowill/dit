@@ -54,6 +54,14 @@ options:
 
 #### cp
 ```
+# local start with: '//'
+
+# copy file from remote to local
 ./dit cp /192.168.1.1:8888/home/work/xxx //home/test/yyy
+
+# copy file from local to remote
+./dit cp //home/test/yyy /192.168.1.1:8888/home/work/xxx 
+
+# copy file between remote machines
 ./dit cp /192.168.1.1:8888/home/work/xxx /192.168.1.2:8888/home/test
 ```
