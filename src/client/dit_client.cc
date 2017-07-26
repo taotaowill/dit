@@ -23,14 +23,22 @@
 
 DECLARE_string(nexus_addr);
 DECLARE_string(nexus_root);
-DECLARE_string(server_nexus_prefix);
+DECLARE_string(nexus_server_prefix);
 DECLARE_int64(file_block_size);
 DECLARE_int32(client_thread_num);
+DECLARE_int32(client_throughput);
+DECLARE_bool(a);
+DECLARE_bool(c);
+DECLARE_bool(f);
+DECLARE_bool(r);
 
 namespace baidu {
 namespace dit {
 
 DitClient::DitClient() : pool_(FLAGS_client_thread_num) {
+    ::sofa::pbrpc::RpcClientOptions options;
+    options.max_throughput_in = FLAGS_client_throughput;
+    rpc_client_.ResetOptions(options);
     nexus_ = new InsSDK(FLAGS_nexus_addr);
     pthread_mutex_init(&pmutex_, NULL);
     pthread_cond_init(&pcond_, NULL);
@@ -51,7 +59,7 @@ bool DitClient::Init() {
 
     // get servers endpoints
     std::vector<std::string> endpoints;
-    std::string full_prefix = FLAGS_nexus_root + FLAGS_server_nexus_prefix;
+    std::string full_prefix = FLAGS_nexus_root + FLAGS_nexus_server_prefix;
     ScanResult* result = nexus_->Scan(full_prefix + "/", full_prefix + "/\xff");
     size_t prefix_len = full_prefix.size() + 1;
     while (!result->Done()) {
@@ -130,17 +138,11 @@ void DitClient::Ls(int argc, char* argv[]) {
     proto::GetFileMetaResponse response;
     request.set_path(dit_path.path);
 
-    // parse options
-    if (argc > 1) {
-        std::string options_str = argv[1];
-        if (boost::algorithm::starts_with(options_str, "-")) {
-            if (options_str.find("a") != std::string::npos) {
-                request.add_options(proto::kOptionAll);
-            }
-            if (options_str.find("r") != std::string::npos) {
-                request.add_options(proto::kOptionRecursive);
-            }
-        }
+    if (FLAGS_a) {
+        request.add_options(proto::kOptionAll);
+    }
+    if (FLAGS_r) {
+        request.add_options(proto::kOptionRecursive);
     }
 
     bool ok = rpc_client_.SendRequest(stub,
@@ -247,7 +249,7 @@ void DitClient::Cp(int argc, char* argv[]) {
             std::string file_path = file.path();
             boost::algorithm::replace_first(file_path, src_path, dst_path);
 
-            int fd = open(file_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+            int fd = open(file_path.c_str(), O_RDWR | O_CREAT, file.perms());
             if(fd == -1) {
                 fprintf(stderr, "file open failed, %s\n", strerror(errno));
                 continue;

@@ -16,9 +16,8 @@
 
 DECLARE_string(nexus_addr);
 DECLARE_string(nexus_root);
-DECLARE_string(server_nexus_prefix);
+DECLARE_string(nexus_server_prefix);
 DECLARE_int32(server_thread_num);
-DECLARE_int64(dir_size);
 
 namespace baidu {
 namespace dit {
@@ -33,7 +32,7 @@ DitServerImpl::~DitServerImpl() {
 
 bool DitServerImpl::RegisterOnNexus(const std::string& endpoint) {
     SDKError err;
-    bool ret = nexus_->Lock(FLAGS_nexus_root + FLAGS_server_nexus_prefix + "/" + endpoint, &err);
+    bool ret = nexus_->Lock(FLAGS_nexus_root + FLAGS_nexus_server_prefix + "/" + endpoint, &err);
     if (!ret) {
         LOG(WARNING) << "failed to acquire nexus lock, " << err;
         return false;
@@ -45,28 +44,27 @@ template<class T>
 void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool opt_a) {
     for (; it!=end_dir_it; ++it) {
         try {
-            if (boost::filesystem::is_directory(*it)){
+            // skip hidden file or dir
+            if (!opt_a && it->path().filename().string()[0] == '.') {
+                continue;
+            }
+
+            if (boost::filesystem::is_directory(*it)) {
                 proto::DitFileMeta* dit_file = response->add_files();
                 dit_file->set_type(proto::kDitDirectory);
-                dit_file->set_size(FLAGS_dir_size);
                 dit_file->set_path(it->path().string() + "/");
+                dit_file->set_size(4096);
                 dit_file->set_perms(boost::filesystem::status(it->path()).permissions());
             }
+
             if(boost::filesystem::is_regular_file(*it)) {
-                boost::filesystem::file_status file_status = boost::filesystem::status(it->path());
-                std::string filename = it->path().filename().string();
-                if (!opt_a && filename[0] == '.') {
-                    continue;
-                }
                 proto::DitFileMeta* dit_file = response->add_files();
-                dit_file->set_perms(file_status.permissions());
                 dit_file->set_type(proto::kDitFile);
-                uintmax_t file_size = boost::filesystem::file_size(*it);
-                dit_file->set_size(file_size);
                 dit_file->set_path(it->path().string());
+                dit_file->set_size(boost::filesystem::file_size(*it));
                 dit_file->set_perms(boost::filesystem::status(it->path()).permissions());
             }
-        } catch (const std::exception& ex ){
+        } catch (const std::exception& ex ) {
             LOG(WARNING) << ex.what();
             continue;
         }
@@ -99,8 +97,7 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
         dit_file->set_perms(boost::filesystem::status(path).permissions());
         dit_file->set_path(path.string());
         dit_file->set_type(proto::kDitFile);
-        uintmax_t file_size = boost::filesystem::file_size(path);
-        dit_file->set_size(file_size);
+        dit_file->set_size(boost::filesystem::file_size(path));
         done->Run();
         return;
     }
@@ -109,10 +106,10 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
     if (boost::filesystem::is_symlink(path)) {
         proto::DitFileMeta* dit_file = response->add_files();
         dit_file->set_type(proto::kDitSymlink);
-        dit_file->set_perms(boost::filesystem::status(path).permissions());
         dit_file->set_path(path.string());
         dit_file->set_canonical(boost::filesystem::canonical(path).string());
         dit_file->set_size(1);
+        dit_file->set_perms(boost::filesystem::status(path).permissions());
         if (!boost::algorithm::ends_with(path.string(), "/")) {
             done->Run();
             return;
@@ -127,10 +124,10 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
         }
         // add dir self
         proto::DitFileMeta* dit_file = response->add_files();
-        dit_file->set_perms(boost::filesystem::status(path).permissions());
-        dit_file->set_path(dir_path);
         dit_file->set_type(proto::kDitDirectory);
-        dit_file->set_size(FLAGS_dir_size);
+        dit_file->set_path(dir_path);
+        dit_file->set_size(4096);
+        dit_file->set_perms(boost::filesystem::status(path).permissions());
 
         // parse options
         bool opt_r = false;

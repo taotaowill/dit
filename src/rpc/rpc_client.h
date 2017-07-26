@@ -23,6 +23,9 @@ public:
     ~RpcClient() {
         delete _rpc_client;
     }
+    void ResetOptions(const sofa::pbrpc::RpcClientOptions& options) {
+        _rpc_client->ResetOptions(options);
+    }
     template <class T>
     bool GetStub(const std::string server, T** stub) {
         MutexLock lock(&_host_map_lock);

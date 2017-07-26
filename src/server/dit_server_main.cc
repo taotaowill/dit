@@ -34,12 +34,12 @@ int main(int argc, char* argv[]) {
     sofa::pbrpc::RpcServer rpc_server(options);
     if (!rpc_server.RegisterService(static_cast<baidu::dit::proto::DitServer*>(dit_server))) {
         LOG(WARNING) << "failed to register dit server service";
-        exit(-1);
+        exit(-2);
     }
 
     if (!rpc_server.Start(endpoint)) {
         LOG(WARNING) << "failed to start dit server on "<< endpoint;
-        exit(-2);
+        exit(-3);
     }
 
     signal(SIGINT, SignalIntHandler);
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "dit server start ok";
 
     while (!s_quit) {
-        sleep(1);
+        sleep(5);
     }
 
     return 0;

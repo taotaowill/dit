@@ -1,25 +1,44 @@
 #include <string>
 
+#include <boost/filesystem.hpp>
+#include <gflags/gflags.h>
+
 #include "dit_client.h"
 
 void print_usage() {
-    printf("Usage: dit COMMAND [OPTION]... [PATH]...\n");
+    printf("Usage: dit COMMAND [PATH]... [OPTION]...\n");
     printf("commands:\n");
     printf("  ls PATH [-a] [-c]: list path\n");
     printf("  cp SRC_PATH DST_PATH [-r] [-f]: copy path\n");
     printf("  rm PATH [-r] [-f]: remove path\n");
     printf("options:\n");
+    printf("  it is recommend to place options at the end of line\n");
     printf("  -r: travel directories recursively\n");
     printf("  -f: do not prompt before overwriting\n");
     printf("  -a: do not ignore entries starting with .\n");
 }
 
 int main(int argc, char* argv[]) {
+    // parse command
     if (argc < 2) {
         print_usage();
         return -1;
     }
 
+    bool has_flagfile = false;
+    for (int i=0; i<argc; i++) {
+        if (strncmp(argv[i], "--flagfile", 10) == 0) {
+            has_flagfile = true;
+            break;
+        }
+    }
+    if (!has_flagfile) {
+        if (boost::filesystem::exists("./dit.flag")) {
+            argv[argc] = "--flagfile=./dit.flag";
+            argc++;
+        }
+    }
+    ::google::ParseCommandLineFlags(&argc, &argv, true);
     baidu::dit::DitClient* client = new baidu::dit::DitClient();
     if(!client->Init()) {
         fprintf(stderr, "-init client failed");
