@@ -10,8 +10,7 @@ DEPS_SOURCE=$WORK_DIR/thirdsrc
 DEPS_PREFIX=$WORK_DIR/thirdparty
 DEPS_CONFIG="--prefix=${DEPS_PREFIX} --disable-shared --with-pic"
 FLAG_DIR=$WORK_DIR/.build
-GIT_REPO="http://gitlab.baidu.com/wanghaitao01/thirdsrc"
-#GIT_REPO="https://github.com/taotaowill/thirdsrc"
+GIT_REPO="https://github.com/taotaowill/thirdsrc"
 
 export PATH=${DEPS_PREFIX}/bin:$PATH
 mkdir -p ${DEPS_SOURCE} ${DEPS_PREFIX} ${FLAG_DIR}

@@ -27,8 +27,13 @@ int main(int argc, char* argv[]) {
         }
     }
     if (!has_flagfile) {
-        if (boost::filesystem::exists("./dit.flag")) {
-            argv[argc] = "--flagfile=./dit.flag";
+        char c_exe_path[PATH_MAX];
+        readlink("/proc/self/exe", c_exe_path, PATH_MAX);
+        boost::filesystem::path exe_path(c_exe_path);
+        std::string s_flag_path = exe_path.parent_path().string() + "/dit.flag";
+        std::string flagfile = "--flagfile=" + s_flag_path;
+        if (boost::filesystem::exists(s_flag_path)) {
+            argv[argc] = strdup(flagfile.c_str());
             argc++;
         }
     }

@@ -7,18 +7,18 @@
 #include "client/dit_client.h"
 
 TEST(DitClient, ParsePath) {
-    std::string raw_path = "/wanghaitao01-pc:9999/";
+    std::string raw_path = "/localhost:9999/";
     ::baidu::dit::DitPath dit_path;
     ::baidu::dit::DitClient* c = new ::baidu::dit::DitClient();
     bool ret = c->ParsePath(raw_path, dit_path);
     ASSERT_TRUE(ret);
-    EXPECT_EQ(dit_path.server, "wanghaitao01-pc:9999");
+    EXPECT_EQ(dit_path.server, "localhost:9999");
     EXPECT_EQ(dit_path.path, "/");
 
-    raw_path = "//home//wanghaitao01/workspace";
+    raw_path = "//home//abc/workspace";
     c->ParsePath(raw_path, dit_path);
     EXPECT_EQ(dit_path.server, "");
-    EXPECT_EQ(dit_path.path, "/home//wanghaitao01/workspace");
+    EXPECT_EQ(dit_path.path, "/home//abc/workspace");
 }
 
 int main(int argc, char* argv[]) {
