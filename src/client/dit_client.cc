@@ -43,6 +43,8 @@ DitClient::DitClient() : pool_(FLAGS_client_thread_num) {
 
 DitClient::~DitClient() {
     delete nexus_;
+    pthread_mutex_destroy(&pmutex_);
+    pthread_cond_destroy(&pcond_);
     std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.begin();
     for (; it!=servers_.end(); ++it) {
         if (NULL != it->second) {
@@ -226,6 +228,8 @@ void DitClient::Cp(int argc, char* argv[]) {
     if (response->files_size() > 1 && dst_path[dst_path.size() - 1] != '/') {
         dst_path += '/';
     }
+
+    std::vector<std::pair<char*, int64_t> > mmap_ptrs;
     for (int i=0; i<response->files_size(); i++) {
         const proto::DitFileMeta& file = response->files(i);
         if (proto::kDitDirectory == file.type()) {
@@ -247,7 +251,8 @@ void DitClient::Cp(int argc, char* argv[]) {
 
             int fd = open(file_path.c_str(), O_RDWR | O_CREAT, file.perms());
             if(fd == -1) {
-                fprintf(stderr, "file open failed, %s\n", strerror(errno));
+                fprintf(stderr, "-file open failed, file: %s, err: %s\n",
+                        file_path.c_str(), strerror(errno));
                 continue;
             }
 
@@ -256,8 +261,10 @@ void DitClient::Cp(int argc, char* argv[]) {
                 continue;
             }
             char* ptr = (char*) mmap(NULL, file.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            mmap_ptrs.push_back(std::make_pair(ptr, file.size()));
+
             if(ptr == MAP_FAILED) {
-                fprintf(stderr, "map failed!\n");
+                fprintf(stderr, "-map failed, file: %s!\n", file_path.c_str());
                 close(fd);
                 continue;
             }
@@ -290,10 +297,10 @@ void DitClient::Cp(int argc, char* argv[]) {
         pthread_cond_wait(&pcond_, &pmutex_);
     }
 
-    // TODO munmap
-    //if (munmap(ptr, file.size()) == -1) {
-    //    fprintf(stdout, "ummap!\n");
-    //}
+    // munmap
+    for (unsigned i=0; i<mmap_ptrs.size(); ++i) {
+        munmap(mmap_ptrs[i].first, mmap_ptrs[i].second);
+    }
 
     return;
 }

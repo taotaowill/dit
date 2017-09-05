@@ -25,11 +25,11 @@ class DitClient {
 public:
     DitClient();
     ~DitClient();
+    bool Init();
     void Ls(int argc, char* argv[]);
     void Cp(int argc, char* argv[]);
     void Rm(int argc, char* argv[]);
 //private:
-    bool Init();
     bool ParsePath(const std::string& raw_path, DitPath& dit_path);
     void GetFileBlock(proto::DitServer_Stub* stub,
                       const proto::DitFileMeta& file,
