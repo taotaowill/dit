@@ -47,14 +47,13 @@ int main(int argc, char* argv[]) {
     }
     google::ParseCommandLineFlags(&argc, &argv, true);
     baidu::dit::DitClient* client = new baidu::dit::DitClient();
-    //timer = new ::baidu::common::timer::AutoTimer(0, "new client");
-    //delete timer;
 
     if(!client->Init()) {
         fprintf(stderr, "-init client failed");
         return -1;
     }
 
+    timer = new ::baidu::common::timer::AutoTimer();
     if (strcmp(argv[1], "ls") == 0) {
         if (argc < 3) {
             print_usage();
@@ -74,6 +73,9 @@ int main(int argc, char* argv[]) {
         }
         client->Rm(argc - 2, argv + 2);
     }
+    fprintf(stdout, "total time %f s\n", timer->TimeUsed() * 1.0 / 1000000);
+    delete timer;
+    timer = NULL;
 
     return 0;
 }

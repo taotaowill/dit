@@ -7,6 +7,7 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include <ins_sdk.h>
+#include <map>
 
 #include "proto/dit.pb.h"
 
@@ -39,6 +40,7 @@ private:
     ThreadPool pool_;
     Mutex mutex_;
     InsSDK* nexus_;
+    std::map<std::string, char*> file_ptrs_;
     std::string endpoint_;
 };
 

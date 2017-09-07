@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 #include <string>
+#include <set>
 
 #include <ins_sdk.h>
 #include <common/mutex.h>
@@ -41,6 +42,7 @@ public:
     InsSDK* nexus_;
     Mutex mutex_;
     int done_;
+    std::set<std::string> failed_files_;
     ThreadPool pool_;
     pthread_mutex_t pmutex_;
     pthread_cond_t pcond_;

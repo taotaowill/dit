@@ -221,8 +221,9 @@ void DitClient::Cp(int argc, char* argv[]) {
     }
 
 
-    fprintf(stdout, "total %d\n", response->files_size());
+    fprintf(stdout, "total item %d\n", response->files_size());
     int count = 0;
+    int64_t total_size = 0;
     done_ = 0;
     // is dir
     if (response->files_size() > 1 && dst_path[dst_path.size() - 1] != '/') {
@@ -246,6 +247,7 @@ void DitClient::Cp(int argc, char* argv[]) {
             }
         } else {
             // download file
+            total_size += file.size();
             std::string file_path = file.path();
             boost::algorithm::replace_first(file_path, src_path, dst_path);
 
@@ -253,19 +255,34 @@ void DitClient::Cp(int argc, char* argv[]) {
             if(fd == -1) {
                 fprintf(stderr, "-file open failed, file: %s, err: %s\n",
                         file_path.c_str(), strerror(errno));
+                failed_files_.insert(file_path);
                 continue;
             }
 
             if (ftruncate(fd, file.size()) < 0) {
                 close(fd);
+                {
+                    MutexLock lock(&mutex_);
+                    failed_files_.insert(file_path);
+                }
                 continue;
             }
+
+            if (0 == file.size()) {
+                close(fd);
+                continue;
+            }
+
             char* ptr = (char*) mmap(NULL, file.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
             mmap_ptrs.push_back(std::make_pair(ptr, file.size()));
 
             if(ptr == MAP_FAILED) {
-                fprintf(stderr, "-map failed, file: %s!\n", file_path.c_str());
+                fprintf(stderr, "-map failed, file: %s, error: %s!\n", file_path.c_str(), strerror(errno));
                 close(fd);
+                {
+                    MutexLock lock(&mutex_);
+                    failed_files_.insert(file_path);
+                }
                 continue;
             }
             close(fd);
@@ -297,6 +314,12 @@ void DitClient::Cp(int argc, char* argv[]) {
         pthread_cond_wait(&pcond_, &pmutex_);
     }
 
+    fprintf(stdout, "total size %f mb \n", (total_size * 1.0) / (1024 * 1024));
+    std::set<std::string>::iterator it = failed_files_.begin();
+    for (; it != failed_files_.end(); ++it) {
+        fprintf(stderr, "-cp file failed: %s", (*it).c_str());
+    }
+
     // munmap
     for (unsigned i=0; i<mmap_ptrs.size(); ++i) {
         munmap(mmap_ptrs[i].first, mmap_ptrs[i].second);
@@ -316,24 +339,30 @@ void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
     block->set_offset(offset);
     block->set_length(length);
     block->set_path(file.path());
-    bool ret = rpc_client_.SendRequest(stub, &proto::DitServer_Stub::GetFileBlock,
-                                       request, response, 30, 1);
+    int retry = 0;
+    bool ok = true;
 
-    if (!ret) {
-        fprintf(stderr, "-get file block rpc failed");
-        return;
+    while (retry < 3) {
+        ok = rpc_client_.SendRequest(stub, &proto::DitServer_Stub::GetFileBlock,
+                                           request, response, 30, 1);
+        if (ok) {
+            break;
+        }
+
+        retry++;
     }
 
-    if (proto::kOk != response->ret().status()) {
-        fprintf(stderr, "-get file block error: %s", response->ret().message().c_str());
+    if (!ok || proto::kOk != response->ret().status()) {
+        {
+            MutexLock lock(&mutex_);
+            ++done_;
+            pthread_cond_signal(&pcond_);
+            failed_files_.insert(file.path());
+        }
         return;
     }
 
     memcpy(fp + response->block().offset(), response->block().content().c_str(), response->block().length());
-    //fprintf(stdout, "+++ FileBlock, file: [%s], offset: [%ld], length: [%ld]\n",
-    //        response->block().path().c_str(),
-    //        response->block().offset(),
-    //        response->block().length());
 
     {
         MutexLock lock(&mutex_);

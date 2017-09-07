@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <fstream>
 #include <iostream>
 
@@ -188,26 +191,23 @@ void DitServerImpl::HandleGetFileBlock(::google::protobuf::RpcController* contro
        << "], length: [" << length
        << "]";
 
-    FILE* fp;
-    if (NULL != (fp = fopen(path.c_str(), "rb"))) {
-        fseek(fp, offset, SEEK_SET);
-        char * buf = new char[length];
-        int l = fread(buf, 1, length, fp);
-        std::string content = std::string(buf, l);
-        proto::DitFileBlock* block = response->mutable_block(); 
+    int fd = open(path.c_str(), O_RDONLY);
+    if(fd > 0) {
+        char* ptr = (char*) mmap(NULL, length, PROT_READ, MAP_SHARED, fd, offset);
+        close(fd);
+        std::string content = std::string(ptr, length);
+        proto::DitFileBlock* block = response->mutable_block();
         block->set_path(path);
         block->set_offset(offset);
-        block->set_length(l);
+        block->set_length(length);
         block->set_content(content);
         response->mutable_ret()->set_status(proto::kOk);
         VLOG(20)
             << "--- FileBlock, file: [" << path
             << "], offset: [" << offset
-            << "], length: [" << l
+            << "], length: [" << length
             << "]";
-
-        delete buf;
-        fclose(fp);
+        munmap(ptr, length);
     } else {
         LOG(WARNING)
            << "open file failed, file: " << path
