@@ -1,3 +1,7 @@
+// Copyright 2018 dit authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #pragma once
 
 #include <assert.h>
@@ -13,7 +17,7 @@ namespace baidu {
 namespace dit {
 
 class RpcClient {
-public:
+ public:
     RpcClient() {
         // 定义 client 对象，一个 client 程序只需要一个 client 对象
         // 可以通过 client_options 指定一些配置参数，譬如线程数、流控等
@@ -102,12 +106,13 @@ public:
         delete rpc_controller;
         callback(request, response, failed, error);
     }
-private:
+
+ private:
     sofa::pbrpc::RpcClient* _rpc_client;
     typedef std::map<std::string, sofa::pbrpc::RpcChannel*> HostMap;
     HostMap _host_map;
     Mutex _host_map_lock;
 };
 
-}
-}
+}  // namespace dit
+}  // namespace baidu

@@ -1,6 +1,11 @@
+// Copyright 2018 dit authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #pragma once
 
 #include <pthread.h>
+#include <map>
 #include <string>
 #include <set>
 
@@ -19,18 +24,19 @@ typedef ::galaxy::ins::sdk::ScanResult ScanResult;
 struct DitPath {
     std::string server;
     std::string path;
-    DitPath() {};
+    DitPath() {}
 };
 
 class DitClient {
-public:
+ public:
     DitClient();
     ~DitClient();
     bool Init();
     void Ls(int argc, char* argv[]);
     void Cp(int argc, char* argv[]);
     void Rm(int argc, char* argv[]);
-//private:
+
+ private:
     bool ParsePath(const std::string& raw_path, DitPath& dit_path);
     void GetFileBlock(proto::DitServer_Stub* stub,
                       const proto::DitFileMeta& file,
@@ -48,5 +54,5 @@ public:
     pthread_cond_t pcond_;
 };
 
-}
-}
+}  // namespace dit
+}  // namespace baidu

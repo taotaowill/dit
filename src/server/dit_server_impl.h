@@ -1,3 +1,7 @@
+// Copyright 2018 dit authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #pragma once
 
 #include <map>
@@ -19,7 +23,7 @@ typedef ::galaxy::ins::sdk::InsSDK InsSDK;
 typedef ::galaxy::ins::sdk::SDKError SDKError;
 
 class DitServerImpl: public proto::DitServer {
-public:
+ public:
     DitServerImpl();
     ~DitServerImpl();
     bool RegisterOnNexus(const std::string& endpoint);
@@ -31,13 +35,13 @@ public:
                       const proto::GetFileBlockRequest* request,
                       proto::GetFileBlockResponse* response,
                       ::google::protobuf::Closure* done);
-private:
+ private:
     bool Init();
     void HandleGetFileBlock(::google::protobuf::RpcController* controller,
                             const proto::GetFileBlockRequest* request,
                             proto::GetFileBlockResponse* response,
                             ::google::protobuf::Closure* done);
-private:
+ private:
     ThreadPool pool_;
     Mutex mutex_;
     InsSDK* nexus_;
@@ -45,5 +49,5 @@ private:
     std::string endpoint_;
 };
 
-}
-}
+}  // namespace dit
+}  // namespace baidu

@@ -46,7 +46,7 @@ fi
 # snappy
 if [ ! -f "${FLAG_DIR}/snappy_1_1_1" ] \
     || [ ! -f "${DEPS_PREFIX}/lib/libsnappy.a" ] \
-    || [ ! -f "${DEPS_PREFIX}/include/snappy.h" ]; then
+    || [ ! -f "${DEPS_PREFIX}/include/snappy/snappy.h" ]; then
     wget --no-check-certificate -O snappy-1.1.1.tar.gz $GIT_REPO/raw/master/snappy-1.1.1.tar.gz
     tar zxf snappy-1.1.1.tar.gz
     cd snappy-1.1.1

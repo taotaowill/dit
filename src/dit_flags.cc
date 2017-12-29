@@ -1,3 +1,7 @@
+// Copyright 2018 dit authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include <gflags/gflags.h>
 
 // service options
@@ -16,4 +20,3 @@ DEFINE_bool(a, false, "do not ignore entries starting with .");
 DEFINE_bool(c, false, "control whether color is used to distinguish file");
 DEFINE_bool(f, true, "do not prompt before overwriting");
 DEFINE_bool(r, false, "travel directories recursively");
-

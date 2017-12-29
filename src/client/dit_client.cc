@@ -1,3 +1,7 @@
+// Copyright 2018 dit authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include "client/dit_client.h"
 
 #include <ctype.h>
@@ -6,7 +10,9 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <map>
 #include <vector>
+#include <utility>
 
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
@@ -47,7 +53,7 @@ DitClient::~DitClient() {
     pthread_mutex_destroy(&pmutex_);
     pthread_cond_destroy(&pcond_);
     std::map<std::string, proto::DitServer_Stub*>::iterator it = servers_.begin();
-    for (; it!=servers_.end(); ++it) {
+    for (; it != servers_.end(); ++it) {
         if (NULL != it->second) {
             delete it->second;
         }
@@ -68,7 +74,7 @@ bool DitClient::Init() {
         result->Next();
     }
 
-    for (unsigned int i=0; i<endpoints.size(); i++) {
+    for (unsigned int i = 0; i < endpoints.size(); i++) {
         std::string endpoint = endpoints[i];
         proto::DitServer_Stub* stub;
         if (rpc_client_.GetStub(endpoint, &stub)) {
@@ -153,7 +159,7 @@ void DitClient::Ls(int argc, char* argv[]) {
         return;
     }
 
-    for (int i=0; i<response.files_size(); i++) {
+    for (int i = 0; i < response.files_size(); i++) {
         const proto::DitFileMeta& file = response.files(i);
         fprintf(stdout, "%o\t%10ld\t%s\t\n", file.perms(), file.size(), file.path().c_str());
     }
@@ -167,11 +173,11 @@ void DitClient::Cp(int argc, char* argv[]) {
     std::string dst_path = std::string(argv[1]);
 
     DitPath src_dit_path, dst_dit_path;
-    if(!ParsePath(src_path, src_dit_path)) {
+    if (!ParsePath(src_path, src_dit_path)) {
         fprintf(stderr, "-src path parse failed\n");
         return;
     }
-    if(!ParsePath(dst_path, dst_dit_path)) {
+    if (!ParsePath(dst_path, dst_dit_path)) {
         fprintf(stderr, "-dst path parse failed\n");
         return;
     }
@@ -231,7 +237,7 @@ void DitClient::Cp(int argc, char* argv[]) {
     }
 
     std::vector<std::pair<char*, int64_t> > mmap_ptrs;
-    for (int i=0; i<response->files_size(); i++) {
+    for (int i = 0; i < response->files_size(); i++) {
         const proto::DitFileMeta& file = response->files(i);
         if (proto::kDitDirectory == file.type()) {
             // create_directory
@@ -252,7 +258,7 @@ void DitClient::Cp(int argc, char* argv[]) {
             boost::algorithm::replace_first(file_path, src_path, dst_path);
 
             int fd = open(file_path.c_str(), O_RDWR | O_CREAT, file.perms());
-            if(fd == -1) {
+            if (fd == -1) {
                 fprintf(stderr, "-file open failed, file: %s, err: %s\n",
                         file_path.c_str(), strerror(errno));
                 failed_files_.insert(file_path);
@@ -273,10 +279,10 @@ void DitClient::Cp(int argc, char* argv[]) {
                 continue;
             }
 
-            char* ptr = (char*) mmap(NULL, file.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            char* ptr = reinterpret_cast<char*> (mmap(NULL, file.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
             mmap_ptrs.push_back(std::make_pair(ptr, file.size()));
 
-            if(ptr == MAP_FAILED) {
+            if (ptr == MAP_FAILED) {
                 fprintf(stderr, "-map failed, file: %s, error: %s!\n", file_path.c_str(), strerror(errno));
                 close(fd);
                 {
@@ -292,7 +298,7 @@ void DitClient::Cp(int argc, char* argv[]) {
             int64_t last = file.size() % FLAGS_file_block_size;
             count += last ? block_cout + 1 : block_cout;
 
-            for (int i=0; i<block_cout; ++i) {
+            for (int i = 0; i < block_cout; ++i) {
                 int64_t offset = FLAGS_file_block_size * i;
                 pool_.AddTask(boost::bind(&DitClient::GetFileBlock, this,
                                           src_stub, file,
@@ -321,7 +327,7 @@ void DitClient::Cp(int argc, char* argv[]) {
     }
 
     // munmap
-    for (unsigned i=0; i<mmap_ptrs.size(); ++i) {
+    for (unsigned i = 0; i < mmap_ptrs.size(); ++i) {
         munmap(mmap_ptrs[i].first, mmap_ptrs[i].second);
     }
 
@@ -378,5 +384,5 @@ void DitClient::GetFileBlock(proto::DitServer_Stub* stub,
 void DitClient::Rm(int argc, char* argv[]) {
 }
 
-}
-}
+}  // namespace dit
+}  // namespace baidu
