@@ -1,5 +1,9 @@
-### virtial file system
-#### orgnize directorys on multi machines into one root
+# Dit
+data transmission tool
+
+## Features
+### 1.transmit data with multi-thread
+### 2.orgnize directorys on multi machines into one root
 ```
 /
 ├── 192.168.1.1:8888
@@ -12,11 +16,11 @@
      └── root
 ```
 
+## Usage
 ### server
 ```
 ./ditd
 ```
-
 
 ### client
 ```
@@ -35,7 +39,6 @@ options:
   -r: travel directories recursively
 ```
 
-#### ls
 ```
 ./dit ls /
 
@@ -53,7 +56,6 @@ options:
 /192.168.1.1:8888/home/work/b/c
 ```
 
-#### cp
 ```
 # local start with: '//'
 
