@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <sys/types.h>
 #include <netinet/in.h>
 
@@ -24,7 +24,7 @@ static std::string GenerateUUID() {
     const std::string tmp = boost::uuids::to_string(uuid);
     return tmp;
 }
-}
+}  // namespace uuid
 
 namespace net {
 static std::string GetLocalIP() {
@@ -54,7 +54,7 @@ static std::string GetLocalIP() {
 
     return local_ip;
 }
-}
+}  // namespace net
 
 }  // namespace dit
 }  // namespace baidu

@@ -12,7 +12,6 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include <ins_sdk.h>
-#include <map>
 
 #include "proto/dit.pb.h"
 
@@ -35,12 +34,14 @@ class DitServerImpl: public proto::DitServer {
                       const proto::GetFileBlockRequest* request,
                       proto::GetFileBlockResponse* response,
                       ::google::protobuf::Closure* done);
+
  private:
     bool Init();
     void HandleGetFileBlock(::google::protobuf::RpcController* controller,
                             const proto::GetFileBlockRequest* request,
                             proto::GetFileBlockResponse* response,
                             ::google::protobuf::Closure* done);
+
  private:
     ThreadPool pool_;
     Mutex mutex_;

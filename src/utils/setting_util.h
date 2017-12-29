@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string>
+
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
@@ -12,7 +14,7 @@ void SetupLog(const std::string& name) {
     if (!name.empty()) {
         program_name = name;
     }
-    if (FLAGS_log_dir.empty()){
+    if (FLAGS_log_dir.empty()) {
         FLAGS_log_dir = ".";
     }
     std::string log_filename = FLAGS_log_dir + "/" + program_name + ".INFO.";

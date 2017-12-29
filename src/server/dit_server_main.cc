@@ -24,7 +24,7 @@ static void SignalIntHandler(int /*sig*/) {
 
 int main(int argc, char* argv[]) {
     bool has_flagfile = false;
-    for (int i=0; i<argc; i++) {
+    for (int i = 0; i < argc; i++) {
         if (strncmp(argv[i], "--flagfile", 10) == 0) {
             has_flagfile = true;
             break;

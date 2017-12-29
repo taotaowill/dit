@@ -50,7 +50,7 @@ bool DitServerImpl::RegisterOnNexus(const std::string& endpoint) {
 
 template<class T>
 void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool opt_a) {
-    for (; it!=end_dir_it; ++it) {
+    for (; it != end_dir_it; ++it) {
         try {
             // skip hidden file or dir
             if (!opt_a && it->path().filename().string()[0] == '.') {
@@ -65,7 +65,7 @@ void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool
                 dit_file->set_perms(boost::filesystem::status(it->path()).permissions());
             }
 
-            if(boost::filesystem::is_regular_file(*it)) {
+            if (boost::filesystem::is_regular_file(*it)) {
                 proto::DitFileMeta* dit_file = response->add_files();
                 dit_file->set_type(proto::kDitFile);
                 dit_file->set_path(it->path().string());
@@ -140,7 +140,7 @@ void DitServerImpl::GetFileMeta(::google::protobuf::RpcController* controller,
         // parse options
         bool opt_r = false;
         bool opt_a = false;
-        for (int i=0; i<request->options_size(); i++) {
+        for (int i = 0; i < request->options_size(); i++) {
             if (proto::kOptionAll == request->options(i)) {
                 opt_a = true;
             }
@@ -177,8 +177,9 @@ void DitServerImpl::GetFileBlock(::google::protobuf::RpcController* controller,
                                  proto::GetFileBlockResponse* response,
                                  ::google::protobuf::Closure* done) {
     // add to pool
-    boost::function<void (void)> handler = \
-        boost::bind(&DitServerImpl::HandleGetFileBlock, this, controller, request, response, done);
+    boost::function<void(void)> handler = boost::bind(
+        &DitServerImpl::HandleGetFileBlock,
+        this, controller, request, response, done);
     pool_.AddTask(handler);
     return;
 }
@@ -197,8 +198,8 @@ void DitServerImpl::HandleGetFileBlock(::google::protobuf::RpcController* contro
        << "]";
 
     int fd = open(path.c_str(), O_RDONLY);
-    if(fd > 0) {
-        char* ptr = (char*) mmap(NULL, length, PROT_READ, MAP_SHARED, fd, offset);
+    if (fd > 0) {
+        char* ptr = reinterpret_cast<char*>(mmap(NULL, length, PROT_READ, MAP_SHARED, fd, offset));
         close(fd);
         std::string z_content;
         snappy::Compress(ptr, length, &z_content);
@@ -225,5 +226,5 @@ void DitServerImpl::HandleGetFileBlock(::google::protobuf::RpcController* contro
     done->Run();
 }
 
-}
-}
+}  // namespace dit
+}  // namespace baidu

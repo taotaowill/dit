@@ -7,6 +7,7 @@ env = Environment(
         LIBS = ['glog', 'gflags', 'gtest', 'tcmalloc', 'unwind', 'pthread', 'rt', 'boost_filesystem', 'ins_sdk','sofa-pbrpc', 'protobuf', 'z', 'snappy',  'common'],
         LIBPATH = ['./thirdparty/lib', './thirdparty/boost_1_57_0/stage/lib'],
         CCFLAGS = '-g2 -Wall -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-but-set-variable',
+        CPPDEFINES=[('private','public')],
         LINKFLAGS = '-Wl,-rpath-link ./thirdparty/boost_1_57_0/stage/lib')
 
 env.Program('ditd', Glob('src/server/*.cc') + ['src/dit_flags.cc', 'src/proto/dit.pb.cc'])
