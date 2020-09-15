@@ -9,11 +9,13 @@ data transmission tool
 ├── 192.168.1.1:8888
 │   ├── dev
 │   ├── home
-│   └── root
-└── 192.168.1.2.8888
-     ├── dev
-     ├── home
-     └── root
+│   ├── root
+│   └── ...
+└── 192.168.1.2:8888
+    ├── dev
+    ├── home
+    ├── root
+    └── ...
 ```
 
 ## Usage

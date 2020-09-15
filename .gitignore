@@ -10,3 +10,9 @@ thirdparty/
 *.INFO*
 *.WARNING*
 *.ERROR*
+
+dit
+ditd
+test_client
+test_server
+test_common_util

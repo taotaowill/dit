@@ -46,7 +46,7 @@ fi
 # snappy
 if [ ! -f "${FLAG_DIR}/snappy_1_1_1" ] \
     || [ ! -f "${DEPS_PREFIX}/lib/libsnappy.a" ] \
-    || [ ! -f "${DEPS_PREFIX}/include/snappy/snappy.h" ]; then
+    || [ ! -f "${DEPS_PREFIX}/include/snappy.h" ]; then
     wget --no-check-certificate -O snappy-1.1.1.tar.gz $GIT_REPO/raw/master/snappy-1.1.1.tar.gz
     tar zxf snappy-1.1.1.tar.gz
     cd snappy-1.1.1
@@ -180,7 +180,7 @@ fi
 if [ ! -f "${FLAG_DIR}/ins" ] \
     || [ ! -f "${DEPS_PREFIX}/lib/libins_sdk.a" ] \
     || [ ! -f "${DEPS_PREFIX}/include/ins_sdk.h" ]; then
-    wget --no-check-certificate http://gitlab.baidu.com/wanghaitao01/packages/raw/master/ins-0.15.tar.gz
+    wget --no-check-certificate -O ins-0.15.tar.gz https://github.com/baidu/ins/archive/0.15.tar.gz
     tar xzf ins-0.15.tar.gz
     cd ins-0.15
     sed -i "s|^PREFIX=.*|PREFIX=${DEPS_PREFIX}|" Makefile
