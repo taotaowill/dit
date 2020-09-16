@@ -9,7 +9,6 @@
 #include <string>
 #include <set>
 
-#include <ins_sdk.h>
 #include <common/mutex.h>
 
 #include "proto/dit.pb.h"
@@ -17,9 +16,6 @@
 
 namespace baidu {
 namespace dit {
-
-typedef ::galaxy::ins::sdk::InsSDK InsSDK;
-typedef ::galaxy::ins::sdk::ScanResult ScanResult;
 
 struct DitPath {
     std::string server;
@@ -31,7 +27,6 @@ class DitClient {
  public:
     DitClient();
     ~DitClient();
-    bool Init();
     void Ls(int argc, char* argv[]);
     void Cp(int argc, char* argv[]);
     void Rm(int argc, char* argv[]);
@@ -43,9 +38,14 @@ class DitClient {
                       int64_t offset,
                       int64_t length,
                       char* fp);
-    std::map<std::string, proto::DitServer_Stub*> servers_;
+    void PutFileBlock(proto::DitServer_Stub* stub,
+                      const proto::DitFileMeta& file,
+                      int64_t offset,
+                      int64_t length,
+                      char* fp);
+    void CpToRemote(DitPath& src_dit, DitPath& dst_dit);
+    void CpToLocal(DitPath& src_dit, DitPath& dst_dit);
     RpcClient rpc_client_;
-    InsSDK* nexus_;
     Mutex mutex_;
     int done_;
     std::set<std::string> failed_files_;

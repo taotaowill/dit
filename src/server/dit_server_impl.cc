@@ -22,34 +22,17 @@
 #include "proto/dit.pb.h"
 #include "utils/common_util.h"
 
-DECLARE_string(nexus_addr);
-DECLARE_string(nexus_root);
-DECLARE_string(nexus_server_prefix);
 DECLARE_int32(server_thread_num);
 
 namespace baidu {
 namespace dit {
 
-DitServerImpl::DitServerImpl() : pool_(FLAGS_server_thread_num) {
-    nexus_ = new InsSDK(FLAGS_nexus_addr);
-}
+DitServerImpl::DitServerImpl() : pool_(FLAGS_server_thread_num) {}
 
-DitServerImpl::~DitServerImpl() {
-    delete nexus_;
-}
+DitServerImpl::~DitServerImpl() {}
 
-bool DitServerImpl::RegisterOnNexus(const std::string& endpoint) {
-    SDKError err;
-    bool ret = nexus_->Lock(FLAGS_nexus_root + FLAGS_nexus_server_prefix + "/" + endpoint, &err);
-    if (!ret) {
-        LOG(WARNING) << "failed to acquire nexus lock, " << err;
-        return false;
-    }
-    return true;
-}
-
-template<class T>
-void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool opt_a) {
+template<class T, class M>
+void travel_files(T it, T end_dir_it, M* message, bool opt_a) {
     for (; it != end_dir_it; ++it) {
         try {
             // skip hidden file or dir
@@ -58,7 +41,7 @@ void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool
             }
 
             if (boost::filesystem::is_directory(*it)) {
-                proto::DitFileMeta* dit_file = response->add_files();
+                proto::DitFileMeta* dit_file = message->add_files();
                 dit_file->set_type(proto::kDitDirectory);
                 dit_file->set_path(it->path().string() + "/");
                 dit_file->set_size(4096);
@@ -66,7 +49,7 @@ void travel_files(T it, T end_dir_it, proto::GetFileMetaResponse* response, bool
             }
 
             if (boost::filesystem::is_regular_file(*it)) {
-                proto::DitFileMeta* dit_file = response->add_files();
+                proto::DitFileMeta* dit_file = message->add_files();
                 dit_file->set_type(proto::kDitFile);
                 dit_file->set_path(it->path().string());
                 dit_file->set_size(boost::filesystem::file_size(*it));
@@ -223,6 +206,98 @@ void DitServerImpl::HandleGetFileBlock(::google::protobuf::RpcController* contro
         response->mutable_ret()->set_message("open file failed");
     }
 
+    done->Run();
+}
+
+void DitServerImpl::PutFileMeta(::google::protobuf::RpcController* controller,
+                                const proto::PutFileMetaRequest* request,
+                                proto::PutFileMetaResponse* response,
+                                ::google::protobuf::Closure* done) {
+    LOG(INFO) << "put file meta, files: " << request->files_size();
+    for (int i = 0; i < request->files_size(); i++) {
+        const proto::DitFileMeta& file = request->files(i);
+        if (proto::kDitDirectory == file.type()) {
+            // create_directory
+            std::string file_path = file.path();
+            if (!boost::filesystem::exists(file_path)) {
+                boost::filesystem::create_directory(file_path);
+            }
+        } else {
+            std::string file_path = file.path();
+            int fd = open(file_path.c_str(), O_RDWR | O_CREAT, file.perms());
+            if (fd == -1) {
+                fprintf(stderr, "-file open failed, file: %s, err: %s\n",
+                        file_path.c_str(), strerror(errno));
+                response->mutable_ret()->set_status(proto::kError);
+                done->Run();
+                return;
+            }
+
+            if (ftruncate(fd, file.size()) < 0) {
+                close(fd);
+                response->mutable_ret()->set_status(proto::kError);
+                return;
+            }
+
+            if (0 == file.size()) {
+                close(fd);
+                response->mutable_ret()->set_status(proto::kError);
+                return;
+            }
+        }
+    }
+
+    response->mutable_ret()->set_status(proto::kOk);
+    done->Run();
+}
+
+void DitServerImpl::PutFileBlock(::google::protobuf::RpcController* controller,
+                                 const proto::PutFileBlockRequest* request,
+                                 proto::PutFileBlockResponse* response,
+                                 ::google::protobuf::Closure* done) {
+    // add to pool
+    boost::function<void(void)> handler = boost::bind(
+        &DitServerImpl::HandlePutFileBlock,
+        this, controller, request, response, done);
+    pool_.AddTask(handler);
+    return;
+}
+
+void DitServerImpl::HandlePutFileBlock(::google::protobuf::RpcController* controller,
+                                       const proto::PutFileBlockRequest* request,
+                                       proto::PutFileBlockResponse* response,
+                                       ::google::protobuf::Closure* done) {
+    std::string path = request->block().path();
+    int64_t offset = request->block().offset();
+    int64_t length = request->block().length();
+    char* ptr = NULL;
+    if (file_ptrs_.find(path) != file_ptrs_.end()) {
+        ptr = file_ptrs_[path];
+    } else {
+        int fd = open(path.c_str(), O_RDWR);
+        struct stat st;
+        if(stat(path.c_str(), &st) != 0) {
+            close(fd);
+            return;
+        }
+
+        if (fd > 0) {
+            ptr = reinterpret_cast<char*>(mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+            file_ptrs_[path] = ptr;
+            close(fd);
+        }
+    }
+
+    std::string content;
+    snappy::Uncompress(request->block().content().c_str(), length, &content);
+    memcpy(ptr + offset, content.c_str(), content.size());
+    VLOG(20)
+       << "+++ FileBlock, file: [" << path
+       << "], offset: [" << offset
+       << "], length: [" << content.size()
+       << "]";
+
+    response->mutable_ret()->set_status(proto::kOk);
     done->Run();
 }
 

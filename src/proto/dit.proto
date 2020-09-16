@@ -55,9 +55,19 @@ message DitFileBlock {
 //}
 
 message PutFileMetaRequest {
+    repeated DitFileMeta files = 1;
 }
 
-message PutFileMetaReqeust {
+message PutFileMetaResponse {
+    optional ReturnCode ret = 1;
+}
+
+message PutFileBlockRequest {
+    optional DitFileBlock block = 1;
+}
+
+message PutFileBlockResponse {
+    optional ReturnCode ret = 1;
 }
 
 message GetFileMetaRequest {
@@ -81,8 +91,8 @@ message GetFileBlockResponse {
 
 service DitServer {
     rpc GetFileMeta(GetFileMetaRequest) returns (GetFileMetaResponse);
-    //rpc PutFileMeta(PutFileMetaRequest) returns (PutFileMetaResponse);
+    rpc PutFileMeta(PutFileMetaRequest) returns (PutFileMetaResponse);
     rpc GetFileBlock(GetFileBlockRequest) returns (GetFileBlockResponse);
-    //rpc PutFileBlocl(PutFileBlockRequest) returns (PutFileBlockResponse);
+    rpc PutFileBlock(PutFileBlockRequest) returns (PutFileBlockResponse);
 }
 

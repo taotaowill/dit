@@ -5,17 +5,18 @@
 #include <signal.h>
 #include <string>
 
+#include <boost/filesystem.hpp>
+#include <common/util.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <sofa/pbrpc/pbrpc.h>
-#include <common/util.h>
-#include <boost/filesystem.hpp>
 
+#include "server/dit_server_impl.h"
 #include "utils/common_util.h"
 #include "utils/setting_util.h"
-#include "server/dit_server_impl.h"
 
 DECLARE_string(server_port);
+DECLARE_string(server_ip);
 static volatile bool s_quit = false;
 
 static void SignalIntHandler(int /*sig*/) {
@@ -47,10 +48,11 @@ int main(int argc, char* argv[]) {
     SetupLog("ditd");
 
     baidu::dit::DitServerImpl* dit_server = new baidu::dit::DitServerImpl();
-    std::string endpoint = ::baidu::dit::net::GetLocalIP() + ":" + FLAGS_server_port;
-    if (!dit_server->RegisterOnNexus(endpoint)) {
-        LOG(FATAL) << "register on nexus failed";
-        exit(-1);
+    std::string endpoint;
+    if (FLAGS_server_ip != "") {
+      endpoint = FLAGS_server_ip + ":" + FLAGS_server_port;
+    } else {
+      endpoint = ::baidu::dit::net::GetLocalIP() + ":" + FLAGS_server_port;
     }
 
     sofa::pbrpc::RpcServerOptions options;
@@ -60,14 +62,15 @@ int main(int argc, char* argv[]) {
         exit(-2);
     }
 
-    if (!rpc_server.Start(endpoint)) {
+    std::string inner_endpoint = "0.0.0.0:" + FLAGS_server_port;
+    if (!rpc_server.Start(inner_endpoint)) {
         LOG(WARNING) << "failed to start dit server on "<< endpoint;
         exit(-3);
     }
 
     signal(SIGINT, SignalIntHandler);
     signal(SIGTERM, SignalIntHandler);
-    LOG(INFO) << "dit server start ok";
+    LOG(INFO) << "dit server start ok, bind " << inner_endpoint;
 
     while (!s_quit) {
         sleep(5);

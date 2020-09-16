@@ -18,6 +18,12 @@ data transmission tool
     └── ...
 ```
 
+## Build
+```
+./build_deps.sh
+scons
+```
+
 ## Usage
 ### server
 ```
@@ -42,13 +48,6 @@ options:
 ```
 
 ```
-./dit ls /
-
-/192.168.1.1:8888
-/192.168.1.2:8888
-```
-
-```
 ./dit ls /192.168.1.1:8888/home/work -r -a
 
 /192.168.1.1:8888/home/work/
@@ -66,7 +65,4 @@ options:
 
 # copy file from local to remote
 ./dit cp //home/test/yyy /192.168.1.1:8888/home/work/xxx 
-
-# copy file between remote machines
-./dit cp /192.168.1.1:8888/home/work/xxx /192.168.1.2:8888/home/test
 ```

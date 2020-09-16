@@ -11,21 +11,16 @@
 #include <common/mutex.h>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <ins_sdk.h>
 
 #include "proto/dit.pb.h"
 
 namespace baidu {
 namespace dit {
 
-typedef ::galaxy::ins::sdk::InsSDK InsSDK;
-typedef ::galaxy::ins::sdk::SDKError SDKError;
-
 class DitServerImpl: public proto::DitServer {
  public:
     DitServerImpl();
     ~DitServerImpl();
-    bool RegisterOnNexus(const std::string& endpoint);
     void GetFileMeta(::google::protobuf::RpcController* controller,
                      const proto::GetFileMetaRequest* request,
                      proto::GetFileMetaResponse* response,
@@ -34,6 +29,15 @@ class DitServerImpl: public proto::DitServer {
                       const proto::GetFileBlockRequest* request,
                       proto::GetFileBlockResponse* response,
                       ::google::protobuf::Closure* done);
+    void PutFileMeta(::google::protobuf::RpcController* controller,
+                     const proto::PutFileMetaRequest* request,
+                     proto::PutFileMetaResponse* response,
+                     ::google::protobuf::Closure* done);
+    void PutFileBlock(::google::protobuf::RpcController* controller,
+                      const proto::PutFileBlockRequest* request,
+                      proto::PutFileBlockResponse* response,
+                      ::google::protobuf::Closure* done);
+
 
  private:
     bool Init();
@@ -41,11 +45,14 @@ class DitServerImpl: public proto::DitServer {
                             const proto::GetFileBlockRequest* request,
                             proto::GetFileBlockResponse* response,
                             ::google::protobuf::Closure* done);
+    void HandlePutFileBlock(::google::protobuf::RpcController* controller,
+                            const proto::PutFileBlockRequest* request,
+                            proto::PutFileBlockResponse* response,
+                            ::google::protobuf::Closure* done);
 
  private:
     ThreadPool pool_;
     Mutex mutex_;
-    InsSDK* nexus_;
     std::map<std::string, char*> file_ptrs_;
     std::string endpoint_;
 };

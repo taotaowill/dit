@@ -5,8 +5,8 @@
 #include <string>
 
 #include <boost/filesystem.hpp>
-#include <gflags/gflags.h>
 #include <common/timer.h>
+#include <gflags/gflags.h>
 
 #include "dit_client.h"
 
@@ -51,11 +51,6 @@ int main(int argc, char* argv[]) {
     }
     google::ParseCommandLineFlags(&argc, &argv, true);
     baidu::dit::DitClient* client = new baidu::dit::DitClient();
-
-    if(!client->Init()) {
-        fprintf(stderr, "-init client failed");
-        return -1;
-    }
 
     timer = new ::baidu::common::timer::AutoTimer();
     if (strcmp(argv[1], "ls") == 0) {
