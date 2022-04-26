@@ -220,9 +220,14 @@ void DitServerImpl::PutFileMeta(::google::protobuf::RpcController* controller,
             // create_directory
             std::string file_path = file.path();
             if (!boost::filesystem::exists(file_path)) {
-                boost::filesystem::create_directory(file_path);
+                boost::filesystem::create_directories(file_path);
             }
         } else {
+            boost::filesystem::path fpath(file.path());
+            if (!boost::filesystem::exists(fpath.parent_path())) {
+                boost::filesystem::create_directories(fpath.parent_path());
+            }
+
             std::string file_path = file.path();
             int fd = open(file_path.c_str(), O_RDWR | O_CREAT, file.perms());
             if (fd == -1) {
